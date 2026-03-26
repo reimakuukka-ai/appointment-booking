@@ -8,19 +8,17 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --font-sans: var(--font-ibm-plex-sans), system-ui, sans-serif;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Brändiväri #284734 ja sen sävyt */
+  --color-brand:       #284734;
+  --color-brand-dark:  #1c3325;
+  --color-brand-light: #eaf0ec;
+  --color-brand-mid:   #3a6349;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-ibm-plex-sans), system-ui, sans-serif;
 }
