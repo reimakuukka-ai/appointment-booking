@@ -25,7 +25,14 @@ function slotEndTime(startTime, durationMin) {
   return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
 }
 
-function doGet() {
+function doGet(e) {
+  var params = e ? e.parameter : {};
+
+  // Hae käyttäjän omat varaukset
+  if (params.action === 'getBookings' && params.email && params.code) {
+    return getMyBookings(params.email, params.code);
+  }
+
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var eventSheet = ss.getSheetByName('Tapahtumat');
   var bookingSheet = ss.getSheetByName('Varaukset');
@@ -33,16 +40,16 @@ function doGet() {
   var eventData = eventSheet.getDataRange().getValues();
   var bookingData = bookingSheet.getDataRange().getValues();
 
-  // Skip header row
   var eventRows = eventData.slice(1);
   var bookingRows = bookingData.slice(1);
 
-  // Count bookings per (eventName + slotDateTime)
+  // Laske varaukset — ohita perutut (sarake F = indeksi 5)
   var bookingCounts = {};
   for (var i = 0; i < bookingRows.length; i++) {
     var row = bookingRows[i];
-    var eventName = String(row[2] || ''); // column C
-    var slotDateTime = String(row[3] || ''); // column D e.g. "2026-04-01 09:00"
+    if (row[5] === true) continue; // Peruttu
+    var eventName = String(row[2] || '');
+    var slotDateTime = String(row[3] || '');
     if (eventName && slotDateTime) {
       var key = eventName + '||' + slotDateTime;
       bookingCounts[key] = (bookingCounts[key] || 0) + 1;
@@ -52,20 +59,22 @@ function doGet() {
   var events = [];
   for (var j = 0; j < eventRows.length; j++) {
     var r = eventRows[j];
-    if (!r[0]) continue; // skip empty rows
+    if (!r[2]) continue;
+    if (r[0] !== true) continue; // Varaussivusto-ruksi
 
-    var name = String(r[0]);
-    var rawDate = r[1];
+    var name = String(r[2]);
+    var rawDate = r[3];
     var date = (rawDate instanceof Date)
       ? Utilities.formatDate(rawDate, Session.getScriptTimeZone(), 'yyyy-MM-dd')
       : String(rawDate);
-    var startTime = String(r[2]);
-    var endTime = String(r[3]);
-    var paikkakunta = String(r[4] || '');
-    var osoite = String(r[5] || '');
-    var maxParticipants = parseInt(r[6]) || 1;
-    var durationMin = parseInt(r[7]) || 60;
-    var maxSlotsPerBooking = parseInt(r[8]) || 1;
+    var startTime = String(r[4]);
+    var endTime = String(r[5]);
+    var paikkakunta = String(r[6] || '');
+    var osoite = String(r[7] || '');
+    var kuvaus = String(r[8] || '');
+    var maxParticipants = parseInt(r[9]) || 1;
+    var durationMin = parseInt(r[10]) || 60;
+    var maxSlotsPerBooking = parseInt(r[11]) || 1;
 
     var slotStarts = generateSlots(startTime, endTime, durationMin);
     var slots = slotStarts.map(function(st) {
@@ -79,7 +88,7 @@ function doGet() {
       };
     });
 
-    events.push({ name: name, date: date, maxSlotsPerBooking: maxSlotsPerBooking, paikkakunta: paikkakunta, osoite: osoite, slots: slots });
+    events.push({ name: name, date: date, maxSlotsPerBooking: maxSlotsPerBooking, paikkakunta: paikkakunta, osoite: osoite, kuvaus: kuvaus, slots: slots });
   }
 
   return ContentService
@@ -87,8 +96,124 @@ function doGet() {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+// ---- Vahvistuskoodi ----
+
+function isCodeValid(email, code) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var codeSheet = ss.getSheetByName('Koodit');
+  var data = codeSheet.getDataRange().getValues();
+  var now = new Date();
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    if (String(row[0]).toLowerCase() === email.toLowerCase() &&
+        String(row[1]) === String(code) &&
+        row[2] instanceof Date && row[2] > now) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function sendVerificationCode(email) {
+  if (!email) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ error: 'Sahkoposti puuttuu.' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  var code = String(Math.floor(100000 + Math.random() * 900000));
+  var expires = new Date(new Date().getTime() + 15 * 60 * 1000);
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var codeSheet = ss.getSheetByName('Koodit');
+
+  // Poista vanhat koodit tälle sähköpostille
+  var data = codeSheet.getDataRange().getValues();
+  for (var i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][0]).toLowerCase() === email.toLowerCase()) {
+      codeSheet.deleteRow(i + 1);
+    }
+  }
+
+  codeSheet.appendRow([email, code, expires]);
+
+  GmailApp.sendEmail(email, 'Vahvistuskoodi - Omat varaukset',
+    'Hei!\n\nVahvistuskoodisi on: ' + code + '\n\nKoodi on voimassa 15 minuuttia.\n\nJos et pyytanyt koodia, voit jattaa taman viestin huomiotta.',
+    { name: 'Ajanvaraus' }
+  );
+
+  return ContentService
+    .createTextOutput(JSON.stringify({ message: 'Koodi lahetetty!' }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ---- Omat varaukset ----
+
+function getMyBookings(email, code) {
+  if (!isCodeValid(email, code)) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ error: 'Virheellinen tai vanhentunut koodi.' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var bookingSheet = ss.getSheetByName('Varaukset');
+  var data = bookingSheet.getDataRange().getValues();
+  var rows = data.slice(1);
+
+  var bookings = [];
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    if (String(row[1]).toLowerCase() === email.toLowerCase() && row[5] !== true) {
+      var slotDateTime = String(row[3]);
+      var parts = slotDateTime.split(' ');
+      var datePart = parts[0] || '';
+      var timePart = parts[1] || '';
+      bookings.push({
+        id: i + 2, // rivinumero sheetissä
+        nimi: String(row[0]),
+        eventName: String(row[2]),
+        date: datePart,
+        time: timePart,
+        timestamp: String(row[4])
+      });
+    }
+  }
+
+  return ContentService
+    .createTextOutput(JSON.stringify({ bookings: bookings }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ---- Peruutus ----
+
+function cancelBooking(email, code, bookingId) {
+  if (!isCodeValid(email, code)) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ error: 'Virheellinen tai vanhentunut koodi.' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var bookingSheet = ss.getSheetByName('Varaukset');
+  var row = bookingSheet.getRange(bookingId, 1, 1, 6).getValues()[0];
+
+  if (String(row[1]).toLowerCase() !== email.toLowerCase()) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ error: 'Ei oikeuksia peruuttaa tata varausta.' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  bookingSheet.getRange(bookingId, 6).setValue(true);
+
+  return ContentService
+    .createTextOutput(JSON.stringify({ message: 'Varaus peruutettu.' }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ---- iCal ----
+
 function toICalDateTime(dateStr, timeStr) {
-  // dateStr: "2026-04-10", timeStr: "09:00" → "20260410T090000"
   var d = dateStr.replace(/-/g, '');
   var t = timeStr.replace(':', '') + '00';
   return d + 'T' + t + '00';
@@ -120,16 +245,46 @@ function buildIcal(eventName, date, slots, location) {
   return lines.join('\r\n');
 }
 
+function addToGoogleCalendar(email, eventName, date, slots, location) {
+  var calendar = CalendarApp.getCalendarsByName('Espoon Vihreiden tapahtumat')[0] || CalendarApp.getDefaultCalendar();
+  var dateParts = date.split('-');
+
+  for (var i = 0; i < slots.length; i++) {
+    var startParts = slots[i].startTime.split(':');
+    var endParts = slots[i].endTime.split(':');
+
+    var startDate = new Date(
+      parseInt(dateParts[0]),
+      parseInt(dateParts[1]) - 1,
+      parseInt(dateParts[2]),
+      parseInt(startParts[0]),
+      parseInt(startParts[1])
+    );
+    var endDate = new Date(
+      parseInt(dateParts[0]),
+      parseInt(dateParts[1]) - 1,
+      parseInt(dateParts[2]),
+      parseInt(endParts[0]),
+      parseInt(endParts[1])
+    );
+
+    calendar.createEvent(eventName, startDate, endDate, {
+      description: 'Varauksesi on vahvistettu. Tervetuloa!',
+      location: location,
+      guests: email,
+      sendInvites: true
+    });
+  }
+}
+
 function sendConfirmationEmail(email, name, eventName, date, slots, paikkakunta, osoite) {
   var location = [osoite, paikkakunta].filter(Boolean).join(', ');
 
-  // Muotoile päivämäärä DD.MM.YYYY
   var parts = date.split('-');
   var formattedDate = parts[2] + '.' + parts[1] + '.' + parts[0];
 
-  // Muotoile slotit listaksi
   var slotLines = slots.map(function(s) {
-    return '• ' + s.startTime + '–' + s.endTime;
+    return '* ' + s.startTime + '-' + s.endTime;
   }).join('\n');
 
   var subject = 'Varausvahvistus: ' + eventName + ' ' + formattedDate;
@@ -137,13 +292,14 @@ function sendConfirmationEmail(email, name, eventName, date, slots, paikkakunta,
   var body = 'Hei ' + name + ',\n\n'
     + 'Varauksesi on vahvistettu!\n\n'
     + 'Tapahtuma: ' + eventName + '\n'
-    + 'Päivämäärä: ' + formattedDate + '\n'
+    + 'Paivamaara: ' + formattedDate + '\n'
     + (location ? 'Paikka: ' + location + '\n' : '')
     + 'Varatut ajat:\n' + slotLines + '\n\n'
-    + 'Kalenterikutsu on liitetty tähän viestiin.\n\n'
-    + 'Nähdään!\n';
+    + 'Voit tarkastella ja perua varauksesi osoitteessa:\n'
+    + 'https://appointment-booking-reimakuukka-ais-projects.vercel.app/omat-varaukset\n\n'
+    + 'Kalenterikutsu on liitetty tahan viestiin.\n\n'
+    + 'Nahdaan!\n';
 
-  // Rakenna .ics kalenterikutsu
   var icalSlots = slots.map(function(s) {
     return { startTime: s.startTime, endTime: s.endTime };
   });
@@ -156,9 +312,85 @@ function sendConfirmationEmail(email, name, eventName, date, slots, paikkakunta,
   });
 }
 
+// ---- Kalenteri sync ----
+
+function syncTapahtumatKalenteriin() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var eventSheet = ss.getSheetByName('Tapahtumat');
+  var data = eventSheet.getDataRange().getValues();
+  var rows = data.slice(1);
+
+  var calendar = CalendarApp.getCalendarsByName('Espoon Vihreiden tapahtumat')[0] || CalendarApp.getDefaultCalendar();
+
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    if (!r[2]) continue;
+    if (r[1] !== true) continue; // Kalenteri-ruksi
+
+    var nimi = String(r[2]);
+    var rawDate = r[3];
+    var date = (rawDate instanceof Date)
+      ? Utilities.formatDate(rawDate, Session.getScriptTimeZone(), 'yyyy-MM-dd')
+      : String(rawDate);
+    var startTime = String(r[4]);
+    var endTime = String(r[5]);
+    var paikkakunta = String(r[6] || '');
+    var osoite = String(r[7] || '');
+    var kuvaus = String(r[8] || '');
+
+    var dateParts = date.split('-');
+    var startParts = startTime.split(':');
+    var endParts = endTime.split(':');
+
+    var startDate = new Date(
+      parseInt(dateParts[0]),
+      parseInt(dateParts[1]) - 1,
+      parseInt(dateParts[2]),
+      parseInt(startParts[0]),
+      parseInt(startParts[1])
+    );
+    var endDate = new Date(
+      parseInt(dateParts[0]),
+      parseInt(dateParts[1]) - 1,
+      parseInt(dateParts[2]),
+      parseInt(endParts[0]),
+      parseInt(endParts[1])
+    );
+
+    var existing = calendar.getEvents(startDate, endDate);
+    var found = false;
+    for (var j = 0; j < existing.length; j++) {
+      if (existing[j].getTitle() === nimi) {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      var desc = (kuvaus ? kuvaus + '\n\n' : '') + 'Ilmoittaudu: https://appointment-booking-reimakuukka-ais-projects.vercel.app';
+      calendar.createEvent(nimi, startDate, endDate, {
+        location: osoite + ', ' + paikkakunta,
+        description: desc
+      });
+    }
+  }
+}
+
+// ---- doPost ----
+
 function doPost(e) {
   try {
     var body = JSON.parse(e.postData.contents);
+
+    if (body.action === 'sendCode') {
+      return sendVerificationCode(body.email);
+    }
+
+    if (body.action === 'cancel') {
+      return cancelBooking(body.email, body.code, body.bookingId);
+    }
+
+    // Uusi varaus
     var name = body.name;
     var email = body.email;
     var eventName = body.eventName;
@@ -170,7 +402,7 @@ function doPost(e) {
 
     if (!name || !email || !eventName || !date || !selectedSlots || selectedSlots.length === 0) {
       return ContentService
-        .createTextOutput(JSON.stringify({ error: 'Puuttuvat kentät.' }))
+        .createTextOutput(JSON.stringify({ error: 'Puuttuvat kentat.' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -179,11 +411,13 @@ function doPost(e) {
     var timestamp = new Date().toISOString();
 
     for (var i = 0; i < selectedSlots.length; i++) {
-      bookingSheet.appendRow([name, email, eventName, date + ' ' + selectedSlots[i], timestamp]);
+      bookingSheet.appendRow([name, email, eventName, date + ' ' + selectedSlots[i], timestamp, false]);
     }
 
-    // Lähetä vahvistussähköposti kalenterikutsulla
     sendConfirmationEmail(email, name, eventName, date, slotDetails, paikkakunta, osoite);
+
+    var location = [osoite, paikkakunta].filter(Boolean).join(', ');
+    addToGoogleCalendar(email, eventName, date, slotDetails, location);
 
     return ContentService
       .createTextOutput(JSON.stringify({ message: 'Varaus onnistui!' }))

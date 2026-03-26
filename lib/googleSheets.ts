@@ -58,6 +58,45 @@ export async function addBookings(booking: BookingRequest): Promise<void> {
   if (data.error) throw new Error(data.error);
 }
 
+export async function sendVerificationCode(email: string): Promise<void> {
+  const res = await fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'sendCode', email }),
+    redirect: 'follow',
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+}
+
+export interface Booking {
+  id: number;
+  nimi: string;
+  eventName: string;
+  date: string;
+  time: string;
+  timestamp: string;
+}
+
+export async function getMyBookings(email: string, code: string): Promise<Booking[]> {
+  const url = `${APPS_SCRIPT_URL}?action=getBookings&email=${encodeURIComponent(email)}&code=${encodeURIComponent(code)}`;
+  const res = await fetch(url, { cache: 'no-store', redirect: 'follow' });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data.bookings ?? [];
+}
+
+export async function cancelBooking(email: string, code: string, bookingId: number): Promise<void> {
+  const res = await fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'cancel', email, code, bookingId }),
+    redirect: 'follow',
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+}
+
 export async function areSlotsAvailable(
   eventName: string,
   date: string,
