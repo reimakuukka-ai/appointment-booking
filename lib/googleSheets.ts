@@ -22,6 +22,15 @@ export interface BookingRequest {
   selectedSlots: string[];
 }
 
+function formatDate(raw: string): string {
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return raw;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export async function getEvents(): Promise<Event[]> {
   const res = await fetch(APPS_SCRIPT_URL, {
     cache: 'no-store',
@@ -29,7 +38,8 @@ export async function getEvents(): Promise<Event[]> {
   });
   if (!res.ok) throw new Error(`Apps Script GET failed: ${res.status}`);
   const data = await res.json();
-  return data.events ?? [];
+  const events: Event[] = data.events ?? [];
+  return events.map((e) => ({ ...e, date: formatDate(e.date) }));
 }
 
 export async function addBookings(booking: BookingRequest): Promise<void> {
