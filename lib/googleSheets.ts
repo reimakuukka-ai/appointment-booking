@@ -22,6 +22,9 @@ export interface BookingRequest {
   eventName: string;
   date: string;
   selectedSlots: string[];
+  paikkakunta?: string;
+  osoite?: string;
+  slotDetails?: { startTime: string; endTime: string }[];
 }
 
 function formatDate(raw: string): string {

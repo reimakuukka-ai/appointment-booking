@@ -61,11 +61,11 @@ function doGet() {
       : String(rawDate);
     var startTime = String(r[2]);
     var endTime = String(r[3]);
-    var maxParticipants = parseInt(r[4]) || 1;
-    var durationMin = parseInt(r[5]) || 60;
-    var maxSlotsPerBooking = parseInt(r[6]) || 1;
-    var paikkakunta = String(r[7] || '');
-    var osoite = String(r[8] || '');
+    var paikkakunta = String(r[4] || '');
+    var osoite = String(r[5] || '');
+    var maxParticipants = parseInt(r[6]) || 1;
+    var durationMin = parseInt(r[7]) || 60;
+    var maxSlotsPerBooking = parseInt(r[8]) || 1;
 
     var slotStarts = generateSlots(startTime, endTime, durationMin);
     var slots = slotStarts.map(function(st) {
@@ -87,6 +87,75 @@ function doGet() {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+function toICalDateTime(dateStr, timeStr) {
+  // dateStr: "2026-04-10", timeStr: "09:00" → "20260410T090000"
+  var d = dateStr.replace(/-/g, '');
+  var t = timeStr.replace(':', '') + '00';
+  return d + 'T' + t + '00';
+}
+
+function buildIcal(eventName, date, slots, location) {
+  var lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Ajanvaraus//FI',
+    'METHOD:REQUEST'
+  ];
+
+  for (var i = 0; i < slots.length; i++) {
+    var startTime = slots[i].startTime;
+    var endTime = slots[i].endTime;
+    var uid = eventName + '-' + date + '-' + startTime + '@ajanvaraus';
+    lines.push('BEGIN:VEVENT');
+    lines.push('UID:' + uid);
+    lines.push('DTSTART:' + toICalDateTime(date, startTime));
+    lines.push('DTEND:' + toICalDateTime(date, endTime));
+    lines.push('SUMMARY:' + eventName);
+    if (location) lines.push('LOCATION:' + location);
+    lines.push('DESCRIPTION:Varauksesi on vahvistettu. Tervetuloa!');
+    lines.push('END:VEVENT');
+  }
+
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}
+
+function sendConfirmationEmail(email, name, eventName, date, slots, paikkakunta, osoite) {
+  var location = [osoite, paikkakunta].filter(Boolean).join(', ');
+
+  // Muotoile päivämäärä DD.MM.YYYY
+  var parts = date.split('-');
+  var formattedDate = parts[2] + '.' + parts[1] + '.' + parts[0];
+
+  // Muotoile slotit listaksi
+  var slotLines = slots.map(function(s) {
+    return '• ' + s.startTime + '–' + s.endTime;
+  }).join('\n');
+
+  var subject = 'Varausvahvistus: ' + eventName + ' ' + formattedDate;
+
+  var body = 'Hei ' + name + ',\n\n'
+    + 'Varauksesi on vahvistettu!\n\n'
+    + 'Tapahtuma: ' + eventName + '\n'
+    + 'Päivämäärä: ' + formattedDate + '\n'
+    + (location ? 'Paikka: ' + location + '\n' : '')
+    + 'Varatut ajat:\n' + slotLines + '\n\n'
+    + 'Kalenterikutsu on liitetty tähän viestiin.\n\n'
+    + 'Nähdään!\n';
+
+  // Rakenna .ics kalenterikutsu
+  var icalSlots = slots.map(function(s) {
+    return { startTime: s.startTime, endTime: s.endTime };
+  });
+  var icalContent = buildIcal(eventName, date, icalSlots, location);
+  var icalBlob = Utilities.newBlob(icalContent, 'text/calendar', 'varaus.ics');
+
+  GmailApp.sendEmail(email, subject, body, {
+    attachments: [icalBlob],
+    name: 'Ajanvaraus'
+  });
+}
+
 function doPost(e) {
   try {
     var body = JSON.parse(e.postData.contents);
@@ -95,6 +164,9 @@ function doPost(e) {
     var eventName = body.eventName;
     var date = body.date;
     var selectedSlots = body.selectedSlots;
+    var paikkakunta = body.paikkakunta || '';
+    var osoite = body.osoite || '';
+    var slotDetails = body.slotDetails || [];
 
     if (!name || !email || !eventName || !date || !selectedSlots || selectedSlots.length === 0) {
       return ContentService
@@ -109,6 +181,9 @@ function doPost(e) {
     for (var i = 0; i < selectedSlots.length; i++) {
       bookingSheet.appendRow([name, email, eventName, date + ' ' + selectedSlots[i], timestamp]);
     }
+
+    // Lähetä vahvistussähköposti kalenterikutsulla
+    sendConfirmationEmail(email, name, eventName, date, slotDetails, paikkakunta, osoite);
 
     return ContentService
       .createTextOutput(JSON.stringify({ message: 'Varaus onnistui!' }))

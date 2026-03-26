@@ -52,12 +52,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const slotDetails = selectedSlots.map((startTime: string) => {
+      const slot = event.slots.find((s) => s.startTime === startTime);
+      return { startTime, endTime: slot?.endTime ?? '' };
+    });
+
     await addBookings({
       name: name.trim(),
       email: email.trim(),
       eventName,
       date,
       selectedSlots,
+      paikkakunta: event.paikkakunta,
+      osoite: event.osoite,
+      slotDetails,
     });
 
     return NextResponse.json(
