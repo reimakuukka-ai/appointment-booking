@@ -64,6 +64,8 @@ function doGet() {
     var maxParticipants = parseInt(r[4]) || 1;
     var durationMin = parseInt(r[5]) || 60;
     var maxSlotsPerBooking = parseInt(r[6]) || 1;
+    var paikkakunta = String(r[7] || '');
+    var osoite = String(r[8] || '');
 
     var slotStarts = generateSlots(startTime, endTime, durationMin);
     var slots = slotStarts.map(function(st) {
@@ -77,7 +79,7 @@ function doGet() {
       };
     });
 
-    events.push({ name: name, date: date, maxSlotsPerBooking: maxSlotsPerBooking, slots: slots });
+    events.push({ name: name, date: date, maxSlotsPerBooking: maxSlotsPerBooking, paikkakunta: paikkakunta, osoite: osoite, slots: slots });
   }
 
   return ContentService

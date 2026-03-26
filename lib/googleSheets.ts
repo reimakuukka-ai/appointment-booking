@@ -11,6 +11,8 @@ export interface Event {
   name: string;
   date: string;
   maxSlotsPerBooking: number;
+  paikkakunta?: string;
+  osoite?: string;
   slots: EventSlot[];
 }
 

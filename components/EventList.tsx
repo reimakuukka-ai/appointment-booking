@@ -67,6 +67,11 @@ export default function EventList({ events }: Props) {
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">{event.name}</h2>
                 <p className="text-sm text-gray-500 mt-0.5">{event.date}</p>
+                {(event.paikkakunta || event.osoite) && (
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    📍 {[event.paikkakunta, event.osoite].filter(Boolean).join(', ')}
+                  </p>
+                )}
                 <p className="text-sm text-gray-500 mt-1">
                   {freeSlots}/{totalSlots} aikaslottia vapaana
                 </p>
