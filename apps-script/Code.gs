@@ -312,6 +312,126 @@ function sendConfirmationEmail(email, name, eventName, date, slots, paikkakunta,
   });
 }
 
+// ---- Tapahtumapäivän yhteenveto ----
+
+function sendEventDaySummary() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var tapahtumat = ss.getSheetByName('Tapahtumat');
+  var varaukset = ss.getSheetByName('Varaukset');
+
+  var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+
+  var tData = tapahtumat.getDataRange().getValues().slice(1);
+  var vData = varaukset.getDataRange().getValues().slice(1);
+
+  var todaysEvents = [];
+  for (var i = 0; i < tData.length; i++) {
+    var r = tData[i];
+    if (!r[2]) continue;
+    var rawDate = r[3];
+    var date = (rawDate instanceof Date)
+      ? Utilities.formatDate(rawDate, Session.getScriptTimeZone(), 'yyyy-MM-dd')
+      : String(rawDate);
+    if (date === today) {
+      todaysEvents.push(String(r[2]));
+    }
+  }
+
+  if (todaysEvents.length === 0) return;
+
+  var organizer = Session.getActiveUser().getEmail();
+  var subject = 'Tapahtumapäivän osallistujalista — ' + today;
+  var body = 'Hei!\n\nTänään ' + today + ' on seuraavat tapahtumat:\n\n';
+
+  for (var j = 0; j < todaysEvents.length; j++) {
+    var eventName = todaysEvents[j];
+    body += '=== ' + eventName + ' ===\n';
+
+    var participants = [];
+    for (var k = 0; k < vData.length; k++) {
+      var row = vData[k];
+      if (String(row[2]) === eventName &&
+          String(row[3]).startsWith(today) &&
+          row[5] !== true) {
+        participants.push({
+          nimi: String(row[0]),
+          puhelin: String(row[6] || '—'),
+          aika: String(row[3]).split(' ')[1] || ''
+        });
+      }
+    }
+
+    if (participants.length === 0) {
+      body += 'Ei varauksia.\n\n';
+    } else {
+      participants.sort(function(a, b) { return a.aika.localeCompare(b.aika); });
+      for (var p = 0; p < participants.length; p++) {
+        body += participants[p].aika + ' — ' + participants[p].nimi + ' | ' + participants[p].puhelin + '\n';
+      }
+      body += '\nYhteensä: ' + participants.length + ' osallistujaa\n\n';
+    }
+  }
+
+  GmailApp.sendEmail(organizer, subject, body, { name: 'Ajanvaraus' });
+}
+
+function setupDailyTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'sendEventDaySummary') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+  ScriptApp.newTrigger('sendEventDaySummary')
+    .timeBased().everyDays(1).atHour(0).create();
+}
+
+// ---- Yhteenveto-välilehti ----
+
+function setupYhteenveto() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  var sheet = ss.getSheetByName('Yhteenveto');
+  if (!sheet) {
+    sheet = ss.insertSheet('Yhteenveto');
+  } else {
+    sheet.clear();
+    sheet.clearDataValidations();
+  }
+
+  // Hae tapahtumat Tapahtumat-sheetistä
+  var tapahtumat = ss.getSheetByName('Tapahtumat');
+  var tData = tapahtumat.getDataRange().getValues().slice(1);
+  var eventNames = [];
+  var seen = {};
+  for (var i = 0; i < tData.length; i++) {
+    var name = String(tData[i][2]);
+    if (name && !seen[name]) {
+      seen[name] = true;
+      eventNames.push(name);
+    }
+  }
+
+  // A1: otsikko, B1: dropdown
+  sheet.getRange('A1').setValue('Tapahtuma:').setFontWeight('bold');
+  if (eventNames.length > 0) {
+    var rule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(eventNames, true)
+      .build();
+    sheet.getRange('B1').setDataValidation(rule).setValue(eventNames[0]);
+  }
+
+  // A3: QUERY-kaava
+  sheet.getRange('A3').setFormula(
+    '=IFERROR(QUERY(Varaukset!A:G,"SELECT D, A, G, B WHERE C = \'"&B1&"\' AND F <> true ORDER BY D",1),"Ei varauksia")'
+  );
+
+  // Leveydet
+  sheet.setColumnWidth(1, 160);
+  sheet.setColumnWidth(2, 200);
+  sheet.setColumnWidth(3, 150);
+  sheet.setColumnWidth(4, 220);
+}
+
 // ---- Kalenteri sync ----
 
 function syncTapahtumatKalenteriin() {
@@ -410,8 +530,9 @@ function doPost(e) {
     var bookingSheet = ss.getSheetByName('Varaukset');
     var timestamp = new Date().toISOString();
 
+    var puhelinnumero = body.puhelinnumero || '';
     for (var i = 0; i < selectedSlots.length; i++) {
-      bookingSheet.appendRow([name, email, eventName, date + ' ' + selectedSlots[i], timestamp, false]);
+      bookingSheet.appendRow([name, email, eventName, date + ' ' + selectedSlots[i], timestamp, false, puhelinnumero]);
     }
 
     sendConfirmationEmail(email, name, eventName, date, slotDetails, paikkakunta, osoite);

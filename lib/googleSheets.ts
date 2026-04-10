@@ -19,6 +19,7 @@ export interface Event {
 export interface BookingRequest {
   name: string;
   email: string;
+  puhelinnumero?: string;
   eventName: string;
   date: string;
   selectedSlots: string[];

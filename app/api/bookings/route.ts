@@ -4,7 +4,7 @@ import { addBookings, areSlotsAvailable, getEvents } from '@/lib/googleSheets';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, eventName, date, selectedSlots } = body;
+    const { name, email, puhelinnumero, eventName, date, selectedSlots } = body;
 
     // Basic validation
     if (!name?.trim() || !email?.trim() || !eventName?.trim() || !date?.trim()) {
@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
     await addBookings({
       name: name.trim(),
       email: email.trim(),
+      puhelinnumero: puhelinnumero?.trim() || '',
       eventName,
       date,
       selectedSlots,

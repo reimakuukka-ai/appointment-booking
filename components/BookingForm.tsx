@@ -13,6 +13,7 @@ interface Props {
 export default function BookingForm({ event, onSuccess, onBack }: Props) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [puhelinnumero, setPuhelinnumero] = useState('');
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,6 +35,7 @@ export default function BookingForm({ event, onSuccess, onBack }: Props) {
         body: JSON.stringify({
           name,
           email,
+          puhelinnumero,
           eventName: event.name,
           date: event.date,
           selectedSlots,
@@ -83,6 +85,19 @@ export default function BookingForm({ event, onSuccess, onBack }: Props) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Matti Meikäläinen"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Puhelinnumero <span className="text-gray-400 font-normal">(vapaaehtoinen)</span>
+          </label>
+          <input
+            type="tel"
+            value={puhelinnumero}
+            onChange={(e) => setPuhelinnumero(e.target.value)}
+            placeholder="+358 40 123 4567"
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
           />
         </div>
