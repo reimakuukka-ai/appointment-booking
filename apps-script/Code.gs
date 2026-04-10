@@ -319,7 +319,7 @@ function sendEventDaySummary() {
   var tapahtumat = ss.getSheetByName('Tapahtumat');
   var varaukset = ss.getSheetByName('Varaukset');
 
-  var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd.MM.yyyy');
 
   var tData = tapahtumat.getDataRange().getValues().slice(1);
   var vData = varaukset.getDataRange().getValues().slice(1);
@@ -395,7 +395,7 @@ function setupYhteenveto() {
     sheet = ss.insertSheet('Yhteenveto');
   } else {
     sheet.clear();
-    sheet.clearDataValidations();
+    sheet.getRange(1, 1, sheet.getMaxRows(), sheet.getMaxColumns()).clearDataValidations();
   }
 
   // Hae tapahtumat Tapahtumat-sheetistä muodossa "DD.MM.YYYY — Tapahtuman nimi"
@@ -551,8 +551,13 @@ function doPost(e) {
     var timestamp = new Date().toISOString();
 
     var puhelinnumero = body.puhelinnumero || '';
+    // Muunna päivämäärä DD.MM.YYYY-muotoon tallennusta varten
+    var dateParts = date.split('-');
+    var formattedDate = dateParts.length === 3
+      ? dateParts[2] + '.' + dateParts[1] + '.' + dateParts[0]
+      : date;
     for (var i = 0; i < selectedSlots.length; i++) {
-      bookingSheet.appendRow([name, email, eventName, date + ' ' + selectedSlots[i], timestamp, false, puhelinnumero]);
+      bookingSheet.appendRow([name, email, eventName, formattedDate + ' ' + selectedSlots[i], timestamp, false, puhelinnumero]);
     }
 
     sendConfirmationEmail(email, name, eventName, date, slotDetails, paikkakunta, osoite);
