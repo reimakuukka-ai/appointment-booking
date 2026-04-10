@@ -398,38 +398,58 @@ function setupYhteenveto() {
     sheet.clearDataValidations();
   }
 
-  // Hae tapahtumat Tapahtumat-sheetistä
+  // Hae tapahtumat Tapahtumat-sheetistä muodossa "DD.MM.YYYY — Tapahtuman nimi"
   var tapahtumat = ss.getSheetByName('Tapahtumat');
   var tData = tapahtumat.getDataRange().getValues().slice(1);
-  var eventNames = [];
+  var eventList = [];
   var seen = {};
   for (var i = 0; i < tData.length; i++) {
-    var name = String(tData[i][2]);
-    if (name && !seen[name]) {
-      seen[name] = true;
-      eventNames.push(name);
+    var r = tData[i];
+    var name = String(r[2]);
+    if (!name) continue;
+    var rawDate = r[3];
+    var dateStr = (rawDate instanceof Date)
+      ? Utilities.formatDate(rawDate, Session.getScriptTimeZone(), 'dd.MM.yyyy')
+      : String(rawDate);
+    var label = dateStr + ' \u2014 ' + name;
+    if (!seen[label]) {
+      seen[label] = true;
+      eventList.push(label);
     }
   }
 
   // A1: otsikko, B1: dropdown
   sheet.getRange('A1').setValue('Tapahtuma:').setFontWeight('bold');
-  if (eventNames.length > 0) {
+  if (eventList.length > 0) {
     var rule = SpreadsheetApp.newDataValidation()
-      .requireValueInList(eventNames, true)
+      .requireValueInList(eventList, true)
       .build();
-    sheet.getRange('B1').setDataValidation(rule).setValue(eventNames[0]);
+    sheet.getRange('B1').setDataValidation(rule).setValue(eventList[0]);
   }
 
-  // A3: QUERY-kaava
+  // B2: tapahtuman nimi (parsittu B1:stä " — " jälkeen)
+  // C2: päivämäärä ISO-muodossa "yyyy-MM-dd" (parsittu "DD.MM.YYYY" alusta)
+  var dash = ' \u2014 ';
+  sheet.getRange('B2').setFormula(
+    "=IF(B1=\"\",\"\",TRIM(MID(B1,FIND(\" \u2014 \",B1)+3,100)))"
+  );
+  sheet.getRange('C2').setFormula(
+    "=IF(B1=\"\",\"\",MID(B1,7,4)&\"-\"&MID(B1,4,2)&\"-\"&LEFT(B1,2))"
+  );
+
+  // A3: QUERY suodattaa sekä nimellä (B2) että päivämäärällä (C2)
   sheet.getRange('A3').setFormula(
-    '=IFERROR(QUERY(Varaukset!A:G,"SELECT D, A, G, B WHERE C = \'"&B1&"\' AND F <> true ORDER BY D",1),"Ei varauksia")'
+    "=IFERROR(QUERY(Varaukset!A:G,\"SELECT D, A, G, B WHERE C = '\"&B2&\"' AND D LIKE '\"&C2&\"%' AND (F = false OR F IS NULL) ORDER BY D\",1),\"Ei varauksia\")"
   );
 
   // Leveydet
   sheet.setColumnWidth(1, 160);
-  sheet.setColumnWidth(2, 200);
-  sheet.setColumnWidth(3, 150);
+  sheet.setColumnWidth(2, 250);
+  sheet.setColumnWidth(3, 130);
   sheet.setColumnWidth(4, 220);
+
+  // Piilota apusolut B2 ja C2 (pieni teksti)
+  sheet.getRange('B2:C2').setFontColor('#cccccc').setFontSize(8);
 }
 
 // ---- Kalenteri sync ----
