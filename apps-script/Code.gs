@@ -4,6 +4,21 @@
 //   Extensions → Apps Script → korvaa kaikki tämällä → tallenna
 // ============================================================
 
+// Tapahtumat-välilehden sarakkeet (0-indeksoitu):
+// A=0  Varaussivusto-ruksi
+// B=1  Kalenteri-ruksi
+// C=2  Nimi
+// D=3  Päivämäärä
+// E=4  Alkuaika
+// F=5  Loppuaika
+// G=6  Paikkakunta
+// H=7  Osoite
+// I=8  Kuvaus
+// J=9  Max osallistujat / slotti
+// K=10 Kesto (min)
+// L=11 Max slotteja / varaus
+// M=12 Apusarake "DD.MM.YYYY — Nimi" (Yhteenveto-dropdownia varten)
+
 function generateSlots(startTime, endTime, durationMin) {
   var slots = [];
   var parts = startTime.split(':');
@@ -45,14 +60,22 @@ function doGet(e) {
 
   // Laske varaukset — ohita perutut (sarake F = indeksi 5)
   var bookingCounts = {};
+  var bookedNames = {};
   for (var i = 0; i < bookingRows.length; i++) {
     var row = bookingRows[i];
     if (row[5] === true) continue; // Peruttu
     var eventName = String(row[2] || '');
     var slotDateTime = String(row[3] || '');
+    var bookerName = String(row[0] || '');
     if (eventName && slotDateTime) {
-      var key = eventName + '||' + slotDateTime;
+      // Muunna "DD.MM.YYYY HH:MM" → "yyyy-MM-dd HH:MM" jotta avain täsmää
+      var dtParts = slotDateTime.split(' ');
+      var dp = (dtParts[0] || '').split('.');
+      var isoDate = dp.length === 3 ? dp[2] + '-' + dp[1] + '-' + dp[0] : dtParts[0];
+      var key = eventName + '||' + isoDate + ' ' + (dtParts[1] || '');
       bookingCounts[key] = (bookingCounts[key] || 0) + 1;
+      if (!bookedNames[key]) bookedNames[key] = [];
+      bookedNames[key].push(bookerName);
     }
   }
 
@@ -60,7 +83,7 @@ function doGet(e) {
   for (var j = 0; j < eventRows.length; j++) {
     var r = eventRows[j];
     if (!r[2]) continue;
-    if (r[0] !== true) continue; // Varaussivusto-ruksi
+    if (r[0] !== true) continue; // Varaussivusto-ruksi (sarake A)
 
     var name = String(r[2]);
     var rawDate = r[3];
@@ -80,11 +103,13 @@ function doGet(e) {
     var slots = slotStarts.map(function(st) {
       var key = name + '||' + date + ' ' + st;
       var booked = bookingCounts[key] || 0;
+      var names = bookedNames[key] || [];
       return {
         startTime: st,
         endTime: slotEndTime(st, durationMin),
         available: Math.max(0, maxParticipants - booked),
-        maxParticipants: maxParticipants
+        maxParticipants: maxParticipants,
+        bookedNames: names
       };
     });
 
@@ -246,7 +271,7 @@ function buildIcal(eventName, date, slots, location) {
 }
 
 function addToGoogleCalendar(email, eventName, date, slots, location) {
-  var calendar = CalendarApp.getCalendarsByName('Espoon Vihreiden tapahtumat')[0] || CalendarApp.getDefaultCalendar();
+  var calendar = CalendarApp.getDefaultCalendar();
   var dateParts = date.split('-');
 
   for (var i = 0; i < slots.length; i++) {
@@ -310,6 +335,20 @@ function sendConfirmationEmail(email, name, eventName, date, slots, paikkakunta,
     attachments: [icalBlob],
     name: 'Ajanvaraus'
   });
+
+  // Lähetä kopio järjestäjälle
+  var organizerBody = 'Uusi varaus!\n\n'
+    + 'Varaaja: ' + name + ' (' + email + ')\n'
+    + 'Tapahtuma: ' + eventName + '\n'
+    + 'Paivamaara: ' + formattedDate + '\n'
+    + (location ? 'Paikka: ' + location + '\n' : '')
+    + 'Varatut ajat:\n' + slotLines + '\n\n'
+    + 'Kalenterikutsu liitteena.';
+
+  GmailApp.sendEmail('info@espoonvihreat.fi', 'Uusi varaus: ' + eventName + ' ' + formattedDate, organizerBody, {
+    attachments: [icalBlob],
+    name: 'Ajanvaraus'
+  });
 }
 
 // ---- Tapahtumapäivän yhteenveto ----
@@ -329,23 +368,30 @@ function sendEventDaySummary() {
     var r = tData[i];
     if (!r[2]) continue;
     var rawDate = r[3];
-    var date = (rawDate instanceof Date)
-      ? Utilities.formatDate(rawDate, Session.getScriptTimeZone(), 'yyyy-MM-dd')
+    var formattedDate = (rawDate instanceof Date)
+      ? Utilities.formatDate(rawDate, Session.getScriptTimeZone(), 'dd.MM.yyyy')
       : String(rawDate);
-    if (date === today) {
-      todaysEvents.push(String(r[2]));
+    if (formattedDate === today) {
+      todaysEvents.push({
+        name: String(r[2]),
+        paikkakunta: String(r[6] || ''),
+        osoite: String(r[7] || '')
+      });
     }
   }
 
   if (todaysEvents.length === 0) return;
 
   var organizer = Session.getActiveUser().getEmail();
-  var subject = 'Tapahtumapäivän osallistujalista — ' + today;
+  var eventNames = todaysEvents.map(function(ev) { return ev.name; }).join(', ');
+  var subject = 'Tapahtumapäivän osallistujalista — ' + today + ' (' + eventNames + ')';
   var body = 'Hei!\n\nTänään ' + today + ' on seuraavat tapahtumat:\n\n';
 
   for (var j = 0; j < todaysEvents.length; j++) {
-    var eventName = todaysEvents[j];
+    var eventName = todaysEvents[j].name;
+    var location = [todaysEvents[j].osoite, todaysEvents[j].paikkakunta].filter(Boolean).join(', ');
     body += '=== ' + eventName + ' ===\n';
+    if (location) body += '📍 ' + location + '\n';
 
     var participants = [];
     for (var k = 0; k < vData.length; k++) {
@@ -396,45 +442,24 @@ function setupYhteenveto() {
   } else {
     sheet.clear();
     sheet.getRange(1, 1, sheet.getMaxRows(), sheet.getMaxColumns()).clearDataValidations();
+    sheet.showColumns(1, sheet.getMaxColumns());
   }
 
-  // Hae tapahtumat Tapahtumat-sheetistä muodossa "DD.MM.YYYY — Tapahtuman nimi"
-  var tapahtumat = ss.getSheetByName('Tapahtumat');
-  var tData = tapahtumat.getDataRange().getValues().slice(1);
-  var eventList = [];
-  var seen = {};
-  for (var i = 0; i < tData.length; i++) {
-    var r = tData[i];
-    var name = String(r[2]);
-    if (!name) continue;
-    var rawDate = r[3];
-    var dateStr = (rawDate instanceof Date)
-      ? Utilities.formatDate(rawDate, Session.getScriptTimeZone(), 'dd.MM.yyyy')
-      : String(rawDate);
-    var label = dateStr + ' \u2014 ' + name;
-    if (!seen[label]) {
-      seen[label] = true;
-      eventList.push(label);
-    }
-  }
-
-  // A1: otsikko, B1: dropdown
+  // A1: otsikko, B1: dropdown joka viittaa suoraan Tapahtumat!M-sarakkeeseen
   sheet.getRange('A1').setValue('Tapahtuma:').setFontWeight('bold');
-  if (eventList.length > 0) {
-    var rule = SpreadsheetApp.newDataValidation()
-      .requireValueInList(eventList, true)
-      .build();
-    sheet.getRange('B1').setDataValidation(rule).setValue(eventList[0]);
-  }
+  var tapahtumatSheet = ss.getSheetByName('Tapahtumat');
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInRange(tapahtumatSheet.getRange('M2:M500'), true)
+    .build();
+  sheet.getRange('B1').setDataValidation(rule);
 
-  // B2: tapahtuman nimi (parsittu B1:stä " — " jälkeen)
-  // C2: päivämäärä ISO-muodossa "yyyy-MM-dd" (parsittu "DD.MM.YYYY" alusta)
-  var dash = ' \u2014 ';
+  // B2: tapahtuman nimi — alkaa aina kohdasta 14 ("DD.MM.YYYY — " = 13 merkkiä)
+  // C2: päivämäärä ISO-muodossa "yyyy-MM-dd" (parsittu kiinteistä sijainneista)
   sheet.getRange('B2').setFormula(
-    "=IF(B1=\"\",\"\",TRIM(MID(B1,FIND(\" \u2014 \",B1)+3,100)))"
+    "=IF(B1=\"\",\"\",TRIM(MID(B1,14,100)))"
   );
   sheet.getRange('C2').setFormula(
-    "=IF(B1=\"\",\"\",MID(B1,7,4)&\"-\"&MID(B1,4,2)&\"-\"&LEFT(B1,2))"
+    "=IF(B1=\"\",\"\",LEFT(B1,10))"
   );
 
   // A3: QUERY suodattaa sekä nimellä (B2) että päivämäärällä (C2)
@@ -454,18 +479,44 @@ function setupYhteenveto() {
 
 // ---- Kalenteri sync ----
 
+function onEditTrigger(e) {
+  var sheet = e.range.getSheet();
+  if (sheet.getName() !== 'Tapahtumat') return;
+  var col = e.range.getColumn();
+  // Sarake B (2) = kalenteri-ruksi
+  if (col === 2) {
+    syncTapahtumatKalenteriin();
+  }
+}
+
+function setupEditTrigger() {
+  // Poista vanhat onEdit-triggerit
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'onEditTrigger') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+  ScriptApp.newTrigger('onEditTrigger')
+    .forSpreadsheet(SpreadsheetApp.getActiveSpreadsheet())
+    .onEdit()
+    .create();
+}
+
 function syncTapahtumatKalenteriin() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var eventSheet = ss.getSheetByName('Tapahtumat');
   var data = eventSheet.getDataRange().getValues();
   var rows = data.slice(1);
 
-  var calendar = CalendarApp.getCalendarsByName('Espoon Vihreiden tapahtumat')[0] || CalendarApp.getDefaultCalendar();
+  var kalenterit = CalendarApp.getCalendarsByName('Espoon Vihreiden tapahtumat');
+  Logger.log('Löydetyt kalenterit: ' + kalenterit.length);
+  var calendar = kalenterit.length > 0 ? kalenterit[0] : CalendarApp.getDefaultCalendar();
+  Logger.log('Käytetään kalenteria: ' + calendar.getName());
 
   for (var i = 0; i < rows.length; i++) {
     var r = rows[i];
     if (!r[2]) continue;
-    if (r[1] !== true) continue; // Kalenteri-ruksi
+    if (r[1] !== true) continue; // Kalenteri-ruksi (sarake B)
 
     var nimi = String(r[2]);
     var rawDate = r[3];
@@ -563,7 +614,7 @@ function doPost(e) {
     sendConfirmationEmail(email, name, eventName, date, slotDetails, paikkakunta, osoite);
 
     var location = [osoite, paikkakunta].filter(Boolean).join(', ');
-    addToGoogleCalendar(email, eventName, date, slotDetails, location);
+    addToGoogleCalendar('info@espoonvihreat.fi', eventName, date, slotDetails, location);
 
     return ContentService
       .createTextOutput(JSON.stringify({ message: 'Varaus onnistui!' }))

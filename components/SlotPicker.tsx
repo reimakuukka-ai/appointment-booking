@@ -23,11 +23,12 @@ export default function SlotPicker({ slots, selected, maxSelect, onChange }: Pro
       <p className="text-sm text-gray-500 mb-3">
         Valitse enintään {maxSelect} aikaslotti{maxSelect !== 1 ? 'a' : ''}.
       </p>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <div className="flex flex-col gap-2">
         {slots.map((slot) => {
           const isSelected = selected.includes(slot.startTime);
           const isFull = slot.available === 0;
           const isDisabled = isFull || (!isSelected && selected.length >= maxSelect);
+          const names = slot.bookedNames ?? [];
 
           return (
             <button
@@ -36,9 +37,9 @@ export default function SlotPicker({ slots, selected, maxSelect, onChange }: Pro
               disabled={isDisabled}
               onClick={() => toggle(slot.startTime)}
               className={[
-                'rounded-lg border px-3 py-3 text-sm text-left transition-colors',
+                'rounded-lg border px-4 py-3 text-sm text-left transition-colors w-full',
                 isSelected
-                  ? 'border-brand bg-brand-light text-brand-dark'
+                  ? 'border-brand bg-brand text-white'
                   : isFull
                   ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
                   : isDisabled
@@ -46,12 +47,19 @@ export default function SlotPicker({ slots, selected, maxSelect, onChange }: Pro
                   : 'border-gray-200 bg-white text-gray-800 hover:border-brand hover:bg-brand-light cursor-pointer',
               ].join(' ')}
             >
-              <span className="font-medium block">
-                {slot.startTime}–{slot.endTime}
-              </span>
-              <span className="text-xs mt-0.5 block">
-                {isFull ? 'Täynnä' : `${slot.available} vapaana`}
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="font-medium">
+                  {slot.startTime}–{slot.endTime}
+                </span>
+                <span className={`text-xs ${isSelected ? 'text-white/80' : 'text-gray-400'}`}>
+                  {isFull ? 'Täynnä' : `${slot.available} vapaana`}
+                </span>
+              </div>
+              {names.length > 0 && (
+                <p className={`text-xs mt-1 ${isSelected ? 'text-white/70' : 'text-gray-400'}`}>
+                  {names.join(', ')}
+                </p>
+              )}
             </button>
           );
         })}

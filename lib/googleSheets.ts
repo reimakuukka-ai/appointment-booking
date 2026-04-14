@@ -5,6 +5,7 @@ export interface EventSlot {
   endTime: string;
   available: number;
   maxParticipants: number;
+  bookedNames: string[];
 }
 
 export interface Event {
