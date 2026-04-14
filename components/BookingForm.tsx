@@ -10,11 +10,89 @@ interface Props {
   onBack: () => void;
 }
 
+function TietosuojaAccordion() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden text-sm">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+      >
+        <span className="font-medium text-gray-700">Tietosuojaseloste</span>
+        <span className="text-gray-400 text-xs ml-2">{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className="px-4 py-4 text-gray-600 space-y-3 leading-relaxed border-t border-gray-200">
+          <p>
+            Tämä tietosuojaseloste on asetuksen (EU) 2016/679 mukainen tiedote
+            rekisteröidyille heidän henkilötietojensa käsittelystä.
+          </p>
+
+          <div>
+            <p className="font-medium text-gray-700">Rekisterinpitäjä</p>
+            <p>Espoon Vihreät ry, Fredrikinkatu 33 A, 2krs., 00120 Helsinki</p>
+            <p>Yhteyshenkilö: Reima Kuukka, reima.kuukka@vihreat.fi</p>
+          </div>
+
+          <div>
+            <p className="font-medium text-gray-700">Kerättävät tiedot</p>
+            <p>Nimi, sähköpostiosoite, vapaaehtoinen puhelinnumero sekä varattu tapahtuma, päivämäärä ja aikaslotti.</p>
+          </div>
+
+          <div>
+            <p className="font-medium text-gray-700">Käyttötarkoitus ja oikeusperuste</p>
+            <p>
+              Tietoja käytetään varauksen hallintaan ja tapahtumien koordinointiin.
+              Käsittelyn oikeusperuste on rekisteröidyn suostumus (tietosuoja-asetus, artikla 6.1(a)).
+            </p>
+            <p className="mt-1">
+              Tapahtumapäivänä järjestäjä saa sähköpostitse listan kaikista ilmoittautuneista,
+              joka sisältää nimet, aikaslotit sekä mahdolliset puhelinnumerot.
+              Tätä listaa ei jaeta tapahtuman ulkopuolisille.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-medium text-gray-700">Säilytysaika</p>
+            <p>
+              Varaukset poistetaan automaattisesti tapahtuman päättymistä seuraavan
+              vuorokauden vaihteessa. Tietoja ei säilytetä tämän jälkeen.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-medium text-gray-700">Tietojenkäsittelijät</p>
+            <p>
+              Tiedot tallennetaan Google LLC:n Google Sheets -palveluun EU:n
+              tietosuoja-asetusten mukaisesti. Tietoja ei siirretä ETA-alueen ulkopuolelle.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-medium text-gray-700">Rekisteröidyn oikeudet</p>
+            <p>
+              Voit tarkastella ja peruuttaa varauksesi sivuston{' '}
+              <em>Omat varaukset</em> -toiminnon kautta. Voit myös pyytää
+              tietojesi tarkastamista, oikaisua tai poistoa ottamalla yhteyttä
+              osoitteeseen reima.kuukka@vihreat.fi.
+              Sinulla on myös oikeus tehdä valitus tietosuojavaltuutetulle.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function BookingForm({ event, onSuccess, onBack }: Props) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [puhelinnumero, setPuhelinnumero] = useState('');
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
+  const [tietosuojaHyvaksytty, setTietosuojaHyvaksytty] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -24,6 +102,11 @@ export default function BookingForm({ event, onSuccess, onBack }: Props) {
 
     if (selectedSlots.length === 0) {
       setError('Valitse vähintään yksi aikaslotti.');
+      return;
+    }
+
+    if (!tietosuojaHyvaksytty) {
+      setError('Hyväksy tietosuojaseloste ennen varauksen lähettämistä.');
       return;
     }
 
@@ -114,6 +197,22 @@ export default function BookingForm({ event, onSuccess, onBack }: Props) {
           />
         </div>
 
+        {/* Tietosuoja */}
+        <div className="space-y-3">
+          <TietosuojaAccordion />
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={tietosuojaHyvaksytty}
+              onChange={(e) => setTietosuojaHyvaksytty(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-brand cursor-pointer"
+            />
+            <span className="text-sm text-gray-700">
+              Olen lukenut tietosuojaselosteen ja hyväksyn henkilötietojeni käsittelyn varauksen tekemistä varten.
+            </span>
+          </label>
+        </div>
+
         {error && (
           <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
             {error}
@@ -122,7 +221,7 @@ export default function BookingForm({ event, onSuccess, onBack }: Props) {
 
         <button
           type="submit"
-          disabled={loading || selectedSlots.length === 0}
+          disabled={loading || selectedSlots.length === 0 || !tietosuojaHyvaksytty}
           className="w-full bg-brand text-white font-medium py-2.5 rounded-lg hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {loading ? 'Varataan...' : `Vahvista varaus${selectedSlots.length > 0 ? ` (${selectedSlots.length} slotti${selectedSlots.length !== 1 ? 'a' : ''})` : ''}`}
