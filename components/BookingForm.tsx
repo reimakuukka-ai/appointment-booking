@@ -33,7 +33,7 @@ function TietosuojaAccordion() {
 
           <div>
             <p className="font-medium text-gray-700">Rekisterinpitäjä</p>
-            <p>Espoon Vihreät ry, Fredrikinkatu 33 A, 2krs., 00120 Helsinki</p>
+            <p>Espoon Vihreät ry, Mannerheimintie 15b A, 00260 Helsinki</p>
             <p>Yhteyshenkilö: Reima Kuukka, reima.kuukka@vihreat.fi</p>
           </div>
 
@@ -50,8 +50,8 @@ function TietosuojaAccordion() {
             </p>
             <p className="mt-1">
               Tapahtumapäivänä jokainen osallistuja saa sähköpostitse listan kaikista
-              ilmoittautuneista, joka sisältää nimet, aikaslotit sekä mahdolliset
-              puhelinnumerot. Listaa ei jaeta tapahtuman ulkopuolisille.
+              samaan tapahtumaan ilmoittautuneista. Lista sisältää nimet, aikaslotit
+              sekä mahdolliset puhelinnumerot. Listaa ei jaeta tapahtuman ulkopuolisille.
             </p>
           </div>
 
