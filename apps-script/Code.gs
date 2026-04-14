@@ -430,6 +430,7 @@ function sendEventDaySummary() {
           row[5] !== true) {
         participants.push({
           nimi: String(row[0]),
+          email: String(row[1]),
           puhelin: String(row[6] || '—'),
           aika: String(row[3]).split(' ')[1] || ''
         });
@@ -444,6 +445,21 @@ function sendEventDaySummary() {
         body += participants[p].aika + ' — ' + participants[p].nimi + ' | ' + participants[p].puhelin + '\n';
       }
       body += '\nYhteensä: ' + participants.length + ' osallistujaa\n\n';
+
+      // Lähetä lista myös jokaiselle osallistujalle
+      var participantSubject = 'Tänään ' + today + ': ' + eventName + ' — osallistujalista';
+      var participantBody = 'Hei!\n\n'
+        + 'Tänään ' + today + ' järjestetään: ' + eventName + '\n'
+        + (location ? '📍 ' + location + '\n' : '')
+        + '\nKanssasi päivystää:\n\n';
+      for (var p2 = 0; p2 < participants.length; p2++) {
+        participantBody += participants[p2].aika + ' — ' + participants[p2].nimi + ' | ' + participants[p2].puhelin + '\n';
+      }
+      participantBody += '\nNähdään tänään!\n';
+
+      for (var p3 = 0; p3 < participants.length; p3++) {
+        GmailApp.sendEmail(participants[p3].email, participantSubject, participantBody, { name: CONFIG.SENDER_NAME });
+      }
     }
   }
 

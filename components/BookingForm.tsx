@@ -49,9 +49,9 @@ function TietosuojaAccordion() {
               Käsittelyn oikeusperuste on rekisteröidyn suostumus (tietosuoja-asetus, artikla 6.1(a)).
             </p>
             <p className="mt-1">
-              Tapahtumapäivänä järjestäjä saa sähköpostitse listan kaikista ilmoittautuneista,
-              joka sisältää nimet, aikaslotit sekä mahdolliset puhelinnumerot.
-              Tätä listaa ei jaeta tapahtuman ulkopuolisille.
+              Tapahtumapäivänä jokainen osallistuja saa sähköpostitse listan kaikista
+              ilmoittautuneista, joka sisältää nimet, aikaslotit sekä mahdolliset
+              puhelinnumerot. Listaa ei jaeta tapahtuman ulkopuolisille.
             </p>
           </div>
 
