@@ -4,6 +4,17 @@
 //   Extensions → Apps Script → korvaa kaikki tämällä → tallenna
 // ============================================================
 
+// ============================================================
+// KONFIGURAATIO — muuta nämä omalle yhdistyksellesi
+// ============================================================
+var CONFIG = {
+  ORGANIZER_EMAIL: 'info@espoonvihreat.fi',    // Järjestäjän sähköposti (saa kopion varauksista + muistutukset)
+  BOOKING_URL: 'https://appointment-booking-reimakuukka-ais-projects.vercel.app/omat-varaukset', // Varaussivuston osoite + /omat-varaukset
+  CALENDAR_NAME: 'Espoon Vihreiden tapahtumat', // Google-kalenterin nimi johon tapahtumat synkronoidaan
+  SENDER_NAME: 'Ajanvaraus'                     // Sähköpostien lähettäjänimi
+};
+// ============================================================
+
 // Tapahtumat-välilehden sarakkeet (0-indeksoitu):
 // A=0  Varaussivusto-ruksi
 // B=1  Kalenteri-ruksi
@@ -146,25 +157,43 @@ function sendVerificationCode(email) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
-  var code = String(Math.floor(100000 + Math.random() * 900000));
-  var expires = new Date(new Date().getTime() + 15 * 60 * 1000);
-
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var codeSheet = ss.getSheetByName('Koodit');
+  var data = codeSheet.getDataRange().getValues();
+  var now = new Date();
+  var oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+  // Rate limiting: max 5 pyyntöä tunnissa per sähköposti
+  var recentRequests = 0;
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]).toLowerCase() === email.toLowerCase()) {
+      var sentAt = data[i][3]; // sarake D = lähetysaika
+      if (sentAt instanceof Date && sentAt > oneHourAgo) {
+        recentRequests++;
+      }
+    }
+  }
+  if (recentRequests >= 5) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ error: 'Liian monta yritystä. Odota tunti ja yritä uudelleen.' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  var code = String(Math.floor(100000 + Math.random() * 900000));
+  var expires = new Date(now.getTime() + 15 * 60 * 1000);
 
   // Poista vanhat koodit tälle sähköpostille
-  var data = codeSheet.getDataRange().getValues();
   for (var i = data.length - 1; i >= 1; i--) {
     if (String(data[i][0]).toLowerCase() === email.toLowerCase()) {
       codeSheet.deleteRow(i + 1);
     }
   }
 
-  codeSheet.appendRow([email, code, expires]);
+  codeSheet.appendRow([email, code, expires, now]); // D = lähetysaika rate limitiä varten
 
   GmailApp.sendEmail(email, 'Vahvistuskoodi - Omat varaukset',
     'Hei!\n\nVahvistuskoodisi on: ' + code + '\n\nKoodi on voimassa 15 minuuttia.\n\nJos et pyytanyt koodia, voit jattaa taman viestin huomiotta.',
-    { name: 'Ajanvaraus' }
+    { name: CONFIG.SENDER_NAME }
   );
 
   return ContentService
@@ -321,7 +350,7 @@ function sendConfirmationEmail(email, name, eventName, date, slots, paikkakunta,
     + (location ? 'Paikka: ' + location + '\n' : '')
     + 'Varatut ajat:\n' + slotLines + '\n\n'
     + 'Voit tarkastella ja perua varauksesi osoitteessa:\n'
-    + 'https://appointment-booking-reimakuukka-ais-projects.vercel.app/omat-varaukset\n\n'
+    + CONFIG.BOOKING_URL + '\n\n'
     + 'Kalenterikutsu on liitetty tahan viestiin.\n\n'
     + 'Nahdaan!\n';
 
@@ -333,7 +362,7 @@ function sendConfirmationEmail(email, name, eventName, date, slots, paikkakunta,
 
   GmailApp.sendEmail(email, subject, body, {
     attachments: [icalBlob],
-    name: 'Ajanvaraus'
+    name: CONFIG.SENDER_NAME
   });
 
   // Lähetä kopio järjestäjälle
@@ -345,9 +374,9 @@ function sendConfirmationEmail(email, name, eventName, date, slots, paikkakunta,
     + 'Varatut ajat:\n' + slotLines + '\n\n'
     + 'Kalenterikutsu liitteena.';
 
-  GmailApp.sendEmail('info@espoonvihreat.fi', 'Uusi varaus: ' + eventName + ' ' + formattedDate, organizerBody, {
+  GmailApp.sendEmail(CONFIG.ORGANIZER_EMAIL, 'Uusi varaus: ' + eventName + ' ' + formattedDate, organizerBody, {
     attachments: [icalBlob],
-    name: 'Ajanvaraus'
+    name: CONFIG.SENDER_NAME
   });
 }
 
@@ -418,17 +447,52 @@ function sendEventDaySummary() {
     }
   }
 
-  GmailApp.sendEmail(organizer, subject, body, { name: 'Ajanvaraus' });
+  GmailApp.sendEmail(organizer, subject, body, { name: CONFIG.SENDER_NAME });
+}
+
+function cleanupOldBookings() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Varaukset');
+  var data = sheet.getDataRange().getValues();
+
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Käy läpi alhaalta ylös jotta rivinumerot pysyvät oikeina poistaessa
+  for (var i = data.length - 1; i >= 1; i--) {
+    var slotDateTime = String(data[i][3] || '');
+    if (!slotDateTime) continue;
+
+    // Muoto: "DD.MM.YYYY HH:MM"
+    var datePart = slotDateTime.split(' ')[0];
+    var parts = datePart.split('.');
+    if (parts.length !== 3) continue;
+
+    var eventDate = new Date(
+      parseInt(parts[2]),
+      parseInt(parts[1]) - 1,
+      parseInt(parts[0])
+    );
+    eventDate.setHours(0, 0, 0, 0);
+
+    if (eventDate < today) {
+      sheet.deleteRow(i + 1);
+    }
+  }
 }
 
 function setupDailyTrigger() {
   ScriptApp.getProjectTriggers().forEach(function(t) {
-    if (t.getHandlerFunction() === 'sendEventDaySummary') {
+    if (t.getHandlerFunction() === 'sendEventDaySummary' ||
+        t.getHandlerFunction() === 'cleanupOldBookings') {
       ScriptApp.deleteTrigger(t);
     }
   });
   ScriptApp.newTrigger('sendEventDaySummary')
     .timeBased().everyDays(1).atHour(0).create();
+  // Siivous ajetaan tuntia myöhemmin jotta yhteenveto ehtii lähteä ensin
+  ScriptApp.newTrigger('cleanupOldBookings')
+    .timeBased().everyDays(1).atHour(1).create();
 }
 
 // ---- Yhteenveto-välilehti ----
@@ -508,7 +572,7 @@ function syncTapahtumatKalenteriin() {
   var data = eventSheet.getDataRange().getValues();
   var rows = data.slice(1);
 
-  var kalenterit = CalendarApp.getCalendarsByName('Espoon Vihreiden tapahtumat');
+  var kalenterit = CalendarApp.getCalendarsByName(CONFIG.CALENDAR_NAME);
   Logger.log('Löydetyt kalenterit: ' + kalenterit.length);
   var calendar = kalenterit.length > 0 ? kalenterit[0] : CalendarApp.getDefaultCalendar();
   Logger.log('Käytetään kalenteria: ' + calendar.getName());
@@ -614,7 +678,7 @@ function doPost(e) {
     sendConfirmationEmail(email, name, eventName, date, slotDetails, paikkakunta, osoite);
 
     var location = [osoite, paikkakunta].filter(Boolean).join(', ');
-    addToGoogleCalendar('info@espoonvihreat.fi', eventName, date, slotDetails, location);
+    addToGoogleCalendar(CONFIG.ORGANIZER_EMAIL, eventName, date, slotDetails, location);
 
     return ContentService
       .createTextOutput(JSON.stringify({ message: 'Varaus onnistui!' }))
