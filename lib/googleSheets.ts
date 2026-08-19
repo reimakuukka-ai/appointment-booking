@@ -46,7 +46,10 @@ export async function getEvents(): Promise<Event[]> {
   if (!res.ok) throw new Error(`Apps Script GET failed: ${res.status}`);
   const data = await res.json();
   const events: Event[] = data.events ?? [];
-  return events.map((e) => ({ ...e, date: formatDate(e.date) }));
+  const today = new Date().toISOString().slice(0, 10);
+  return events
+    .map((e) => ({ ...e, date: formatDate(e.date) }))
+    .filter((e) => e.date >= today);
 }
 
 export async function addBookings(booking: BookingRequest): Promise<void> {

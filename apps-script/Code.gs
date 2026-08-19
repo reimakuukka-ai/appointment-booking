@@ -90,6 +90,8 @@ function doGet(e) {
     }
   }
 
+  var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+
   var events = [];
   for (var j = 0; j < eventRows.length; j++) {
     var r = eventRows[j];
@@ -101,6 +103,7 @@ function doGet(e) {
     var date = (rawDate instanceof Date)
       ? Utilities.formatDate(rawDate, Session.getScriptTimeZone(), 'yyyy-MM-dd')
       : String(rawDate);
+    if (date < today) continue; // Ohita menneet tapahtumat
     var startTime = String(r[4]);
     var endTime = String(r[5]);
     var paikkakunta = String(r[6] || '');
