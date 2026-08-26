@@ -3,6 +3,9 @@ import { getEvents, Event } from '@/lib/googleSheets';
 import EventList from '@/components/EventList';
 
 export const dynamic = 'force-dynamic';
+// Apps Script -kutsu voi joutua yrittämään uudelleen (ks. lib/googleSheets.ts) —
+// annetaan Vercelin funktiolle Hobby-tason oletusta (10 s) enemmän aikaa.
+export const maxDuration = 30;
 
 export default async function HomePage() {
   let events: Event[] = [];

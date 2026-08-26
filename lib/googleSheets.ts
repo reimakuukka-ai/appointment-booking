@@ -38,8 +38,35 @@ function formatDate(raw: string): string {
   return `${y}-${m}-${day}`;
 }
 
+// Apps Script -web app on ajoittain hidas (cold start / Googlen omat viiveet, jopa 20+ s).
+// Yritetään uudelleen ennen luovutusta, ettei satunnainen hitaus näy käyttäjälle virheenä.
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit = {},
+  retries = 2,
+  timeoutMs = 9000
+): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timeout);
+      return res;
+    } catch (err) {
+      clearTimeout(timeout);
+      lastError = err;
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+      }
+    }
+  }
+  throw lastError;
+}
+
 export async function getEvents(): Promise<Event[]> {
-  const res = await fetch(APPS_SCRIPT_URL, {
+  const res = await fetchWithRetry(APPS_SCRIPT_URL, {
     cache: 'no-store',
     redirect: 'follow',
   });
