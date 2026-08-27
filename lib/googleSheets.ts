@@ -43,8 +43,8 @@ function formatDate(raw: string): string {
 async function fetchWithRetry(
   url: string,
   options: RequestInit = {},
-  retries = 2,
-  timeoutMs = 9000
+  retries = 1,
+  timeoutMs = 13000
 ): Promise<Response> {
   let lastError: unknown;
   for (let attempt = 0; attempt <= retries; attempt++) {

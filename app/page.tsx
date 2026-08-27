@@ -2,7 +2,14 @@ import Link from 'next/link';
 import { getEvents, Event } from '@/lib/googleSheets';
 import EventList from '@/components/EventList';
 
-export const dynamic = 'force-dynamic';
+// Aiemmin force-dynamic: joka ikinen kävijä odotti live Apps Script -kutsun,
+// jonka vasteaika vaihtelee rajusti (havaittu 3-22 s). Lyhyt ISR-välimuisti
+// tekee sivusta lähes aina heti valmiin useimmille kävijöille, ja vain
+// taustalla tapahtuva uudelleengenerointi (max kerran 20 s:ssa) odottaa
+// Apps Scriptiä. Varauksen lähetys tarkistaa saatavuuden silti aina
+// tuoreeltaan (ks. app/api/bookings/route.ts), joten tämä ei vaaranna
+// varausten oikeellisuutta.
+export const revalidate = 20;
 // Apps Script -kutsu voi joutua yrittämään uudelleen (ks. lib/googleSheets.ts) —
 // annetaan Vercelin funktiolle Hobby-tason oletusta (10 s) enemmän aikaa.
 export const maxDuration = 30;
