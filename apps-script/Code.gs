@@ -29,6 +29,12 @@ var CONFIG = {
 // K=10 Kesto (min)
 // L=11 Max slotteja / varaus
 // M=12 Apusarake "DD.MM.YYYY — Nimi" (Yhteenveto-dropdownia varten)
+// N=13 Näytä osallistujat -ruksi (oletus PÄÄLLÄ jos tyhjä/täyttämätön):
+//      TRUE/tyhjä = osallistujien nimet näkyvät nettisivulla JA jokainen
+//                   osallistuja saa tapahtumapäivänä sähköpostin muista
+//                   samaan aikaslottiin ilmoittautuneista.
+//      FALSE      = kumpikaan ei tapahdu tälle tapahtumalle (järjestäjän
+//                   oma päivittäinen yhteenvetoviesti lähtee silti aina).
 
 function generateSlots(startTime, endTime, durationMin) {
   var slots = [];
@@ -112,12 +118,13 @@ function doGet(e) {
     var maxParticipants = parseInt(r[9]) || 1;
     var durationMin = parseInt(r[10]) || 60;
     var maxSlotsPerBooking = parseInt(r[11]) || 1;
+    var showParticipants = r[13] !== false; // N-sarake: tyhjä/täyttämätön = näytä (oletus)
 
     var slotStarts = generateSlots(startTime, endTime, durationMin);
     var slots = slotStarts.map(function(st) {
       var key = name + '||' + date + ' ' + st;
       var booked = bookingCounts[key] || 0;
-      var names = bookedNames[key] || [];
+      var names = showParticipants ? (bookedNames[key] || []) : [];
       return {
         startTime: st,
         endTime: slotEndTime(st, durationMin),
@@ -407,7 +414,8 @@ function sendEventDaySummary() {
       todaysEvents.push({
         name: String(r[2]),
         paikkakunta: String(r[6] || ''),
-        osoite: String(r[7] || '')
+        osoite: String(r[7] || ''),
+        showParticipants: r[13] !== false // N-sarake: tyhjä/täyttämätön = näytä (oletus)
       });
     }
   }
@@ -449,19 +457,21 @@ function sendEventDaySummary() {
       }
       body += '\nYhteensä: ' + participants.length + ' osallistujaa\n\n';
 
-      // Lähetä lista myös jokaiselle osallistujalle
-      var participantSubject = 'Tänään ' + today + ': ' + eventName + ' — osallistujalista';
-      var participantBody = 'Hei!\n\n'
-        + 'Tänään ' + today + ' järjestetään: ' + eventName + '\n'
-        + (location ? '📍 ' + location + '\n' : '')
-        + '\nKanssasi päivystää:\n\n';
-      for (var p2 = 0; p2 < participants.length; p2++) {
-        participantBody += participants[p2].aika + ' — ' + participants[p2].nimi + ' | ' + participants[p2].puhelin + '\n';
-      }
-      participantBody += '\nNähdään tänään!\n';
+      // Lähetä lista myös jokaiselle osallistujalle — vain jos N-sarake sallii
+      if (todaysEvents[j].showParticipants) {
+        var participantSubject = 'Tänään ' + today + ': ' + eventName + ' — osallistujalista';
+        var participantBody = 'Hei!\n\n'
+          + 'Tänään ' + today + ' järjestetään: ' + eventName + '\n'
+          + (location ? '📍 ' + location + '\n' : '')
+          + '\nKanssasi päivystää:\n\n';
+        for (var p2 = 0; p2 < participants.length; p2++) {
+          participantBody += participants[p2].aika + ' — ' + participants[p2].nimi + ' | ' + participants[p2].puhelin + '\n';
+        }
+        participantBody += '\nNähdään tänään!\n';
 
-      for (var p3 = 0; p3 < participants.length; p3++) {
-        GmailApp.sendEmail(participants[p3].email, participantSubject, participantBody, { name: CONFIG.SENDER_NAME });
+        for (var p3 = 0; p3 < participants.length; p3++) {
+          GmailApp.sendEmail(participants[p3].email, participantSubject, participantBody, { name: CONFIG.SENDER_NAME });
+        }
       }
     }
   }

@@ -37,6 +37,7 @@ Ajanvarausjärjestelmä Espoon Vihreiden tapahtumiin. Varaajat valitsevat aikasl
 | K | Kesto minuutteina |
 | L | Max slotteja per varaus |
 | M | Apusarake: `=ARRAYFORMULA(IF(C2:C<>"";TEXT(D2:D;"DD.MM.YYYY")&" — "&C2:C;""))` (Yhteenveto-dropdownia varten) |
+| N | Näytä osallistujat -ruksi. TRUE/tyhjä (oletus) = osallistujien nimet näkyvät nettisivulla ja jokainen osallistuja saa tapahtumapäivänä sähköpostin muista samaan aikaslottiin ilmoittautuneista. FALSE = kumpikaan ei tapahdu tälle tapahtumalle (järjestäjän oma yhteenvetoviesti lähtee silti aina). |
 
 ### Varaukset-välilehti
 | Sarake | Sisältö |
@@ -66,14 +67,14 @@ Järjestäjän näkymä varauksiin. Dropdown B1:ssä hakee Tapahtumat!M2:M500.
 ## Apps Script -funktiot
 | Funktio | Kuvaus |
 |---------|--------|
-| `doGet(e)` | Palauttaa tapahtumat + varausten nimet per slotti |
+| `doGet(e)` | Palauttaa tapahtumat + varausten nimet per slotti (piilotetaan jos N-sarake FALSE) |
 | `doPost(e)` | Reititys: sendCode / cancel / uusi varaus |
 | `sendConfirmationEmail()` | Vahvistus varaajalle + kopio info@espoonvihreat.fi |
 | `addToGoogleCalendar()` | Kalenterikutsu info@espoonvihreat.fi:lle (getDefaultCalendar) |
 | `sendVerificationCode()` | Lähettää 6-numeroisen koodin "Omat varaukset" -sivulle |
 | `getMyBookings()` | Hakee käyttäjän omat varaukset koodilla |
 | `cancelBooking()` | Merkitsee varauksen perutuksi (F=TRUE) |
-| `sendEventDaySummary()` | Lähettää osallistujalistan järjestäjälle tapahtumapäivän alussa |
+| `sendEventDaySummary()` | Lähettää osallistujalistan järjestäjälle tapahtumapäivän alussa; osallistujille itselleen vain jos N-sarake TRUE/tyhjä |
 | `cleanupOldBookings()` | Poistaa menneiden tapahtumien varaukset sheetistä |
 | `setupDailyTrigger()` | Asettaa yölliset triggerit (00:00 yhteenveto, 01:00 siivous) |
 | `setupEditTrigger()` | Asettaa onEdit-triggerin kalenterisynkronointia varten |
