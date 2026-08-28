@@ -29,7 +29,7 @@ export default async function HomePage() {
     <main className="min-h-screen bg-gray-50 py-12 px-4">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-3xl font-bold text-gray-900">Varaa paikka tapahtumaan</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Ilmoittautuminen tapahtumiin</h1>
           <Link href="/omat-varaukset" className="text-sm text-brand hover:underline">
             Omat varaukset →
           </Link>
