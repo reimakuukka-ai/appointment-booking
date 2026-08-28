@@ -10,7 +10,7 @@ export const config = {
   siteTitle: 'Ajanvaraus',
 
   // Lyhyt kuvaus (näkyy hakukoneiden tuloksissa)
-  siteDescription: 'Varaa paikka tapahtumaan',
+  siteDescription: 'Ilmoittautuminen tapahtumiin',
 
   // Brändiväri HEX-muodossa — muuta myös app/globals.css
   brandColor: '#284734',
