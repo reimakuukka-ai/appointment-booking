@@ -21,10 +21,18 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { brand, brandDark, brandLight, brandMid } = config.brandShades;
+
   return (
     <html
       lang="fi"
       className={`${ibmPlexSans.variable} h-full antialiased`}
+      style={{
+        '--color-brand': brand,
+        '--color-brand-dark': brandDark,
+        '--color-brand-light': brandLight,
+        '--color-brand-mid': brandMid,
+      } as React.CSSProperties}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

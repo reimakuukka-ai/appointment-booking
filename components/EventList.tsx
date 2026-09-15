@@ -51,14 +51,14 @@ export default function EventList({ events }: Props) {
 
   if (confirmedEvent) {
     return (
-      <div className="rounded-xl bg-brand-light border border-brand p-8 text-center">
+      <div className="rounded-xl bg-[var(--color-brand-light)] border border-[var(--color-brand)] p-8 text-center">
         <div className="text-4xl mb-3">✓</div>
-        <h2 className="text-xl font-semibold text-brand mb-2">Varaus vahvistettu!</h2>
-        <p className="text-brand">
+        <h2 className="text-xl font-semibold text-[var(--color-brand)] mb-2">Varaus vahvistettu!</h2>
+        <p className="text-[var(--color-brand)]">
           Paikka tapahtumaan <strong>{confirmedEvent.name}</strong> ({formatDate(confirmedEvent.date)}) on varattu onnistuneesti.
         </p>
         <button
-          className="mt-5 text-sm text-brand underline"
+          className="mt-5 text-sm text-[var(--color-brand)] underline"
           onClick={() => {
             setConfirmedEvent(null);
             setSelectedEvent(null);
@@ -87,7 +87,7 @@ export default function EventList({ events }: Props) {
         <select
           value={filterPaikkakunta}
           onChange={(e) => setFilterPaikkakunta(e.target.value)}
-          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand"
+          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)]"
         >
           <option value="">Kaikki paikkakunnat</option>
           {paikkakunnat.map((p) => (
@@ -98,7 +98,7 @@ export default function EventList({ events }: Props) {
         <select
           value={filterDate}
           onChange={(e) => setFilterDate(e.target.value)}
-          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand"
+          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)]"
         >
           <option value="">Kaikki päivämäärät</option>
           {dates.map((d) => (
@@ -109,7 +109,7 @@ export default function EventList({ events }: Props) {
         {(filterPaikkakunta || filterDate) && (
           <button
             onClick={() => { setFilterPaikkakunta(''); setFilterDate(''); }}
-            className="text-sm text-brand underline"
+            className="text-sm text-[var(--color-brand)] underline"
           >
             Tyhjennä suodattimet
           </button>
@@ -125,7 +125,7 @@ export default function EventList({ events }: Props) {
         <div className="space-y-8">
           {Object.entries(groupedByDate).map(([date, dateEvents]) => (
             <div key={date}>
-              <h2 className="text-base font-semibold text-brand mb-3 pb-1 border-b border-brand-light">
+              <h2 className="text-base font-semibold text-[var(--color-brand)] mb-3 pb-1 border-b border-[var(--color-brand-light)]">
                 {formatDate(date)}
               </h2>
               <div className="space-y-4">
@@ -157,7 +157,7 @@ export default function EventList({ events }: Props) {
                         </div>
                         <button
                           onClick={() => setSelectedEvent(event)}
-                          className="shrink-0 bg-brand text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-brand-dark transition-colors"
+                          className="shrink-0 bg-[var(--color-brand)] text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-[var(--color-brand-dark)] transition-colors"
                         >
                           Varaa paikka
                         </button>
@@ -171,7 +171,7 @@ export default function EventList({ events }: Props) {
                             className={`text-xs px-2 py-1 rounded-md ${
                               slot.available === 0
                                 ? 'bg-gray-100 text-gray-400'
-                                : 'bg-brand-light text-brand'
+                                : 'bg-[var(--color-brand-light)] text-[var(--color-brand)]'
                             }`}
                           >
                             {slot.startTime}–{slot.endTime}

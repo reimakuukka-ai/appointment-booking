@@ -2,6 +2,24 @@
 
 Ilmainen, helposti pystytettävä ajanvaraustyökalu yhdistyksille ja järjestöille.
 
+## Nopein tapa ottaa käyttöön
+
+Jos haluat vain omat brändivärisi ja yhteystietosi käyttöön ilman koodin muokkaamista tai
+terminaalia, tee ensin Google Sheets + Apps Script -osuus (ks. [kohta 2–3](#2-luo-google-sheets--tietokanta)
+alla), ja klikkaa sitten:
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/reimakuukka-ai/appointment-booking&env=GOOGLE_APPS_SCRIPT_URL,NEXT_PUBLIC_ORG_NAME,NEXT_PUBLIC_SITE_TITLE,NEXT_PUBLIC_SITE_DESCRIPTION,NEXT_PUBLIC_BRAND_COLOR,NEXT_PUBLIC_PRIVACY_CONTROLLER_NAME,NEXT_PUBLIC_PRIVACY_CONTROLLER_ADDRESS,NEXT_PUBLIC_PRIVACY_CONTACT_NAME,NEXT_PUBLIC_PRIVACY_CONTACT_EMAIL&envDescription=Katso%20selitykset%20.env.example-tiedostosta&envLink=https://github.com/reimakuukka-ai/appointment-booking/blob/main/.env.example&project-name=ajanvaraus&repository-name=ajanvaraus)
+
+Tämä tekee kaiken selaimessa: luo oman kopion repositoriosta GitHub-tilillesi, kysyy lomakkeella
+brändivärin, organisaation nimen ja tietosuojaselosteen yhteystiedot, ja deployaa suoraan.
+**Täytä tietosuojakentät omilla tiedoillasi** — muuten sivustolla näkyy virheellisesti Espoon
+Vihreiden yhteystiedot. Kun deploy on valmis, muista vielä päivittää `BOOKING_URL`
+Apps Scriptin `CONFIG`-lohkoon (ks. [kohta 3](#3-asenna-apps-script--backend)) ja deployata se
+uudelleen.
+
+Jos haluat sen sijaan muokata koodia itse (esim. vaihtaa fonttia) tai käyttää Claudea oppaana
+koko prosessin läpi, katso `START_HERE.md` tai jatka alla olevaa manuaalista ohjetta.
+
 **Ominaisuudet:**
 - Tapahtumat ja aikaslotit Google Sheetsistä
 - Sähköpostivahvistus + .ics-kalenteriliite varaajalle
@@ -26,10 +44,14 @@ Ilmainen, helposti pystytettävä ajanvaraustyökalu yhdistyksille ja järjestö
 
 ## Asennus
 
-### 1. Kloonaa repositorio
+### 1. Forkkaa ja kloonaa repositorio
+
+Sinulla ei ole kirjoitusoikeutta alkuperäiseen repoon, joten forkkaa se ensin omalle
+GitHub-tilillesi ([Fork-painike täällä](https://github.com/reimakuukka-ai/appointment-booking)),
+ja kloonaa sitten **oma forkkisi** (korvaa `OMATILI` GitHub-käyttäjätunnuksellasi):
 
 ```bash
-git clone https://github.com/reimakuukka-ai/appointment-booking.git
+git clone https://github.com/OMATILI/appointment-booking.git
 cd appointment-booking
 npm install
 ```
@@ -112,35 +134,11 @@ var CONFIG = {
 
 ---
 
-### 4. Muokkaa brändi
+### 4. Brändi ja tietosuojaseloste
 
-**Värit** — `app/globals.css`:
-```css
---color-brand:       #284734;   /* Vaihda omaksi pääväriksesi */
---color-brand-dark:  #1c3325;   /* Tummempi sävy */
---color-brand-light: #eaf0ec;   /* Vaalea tausta */
-```
-
-**Fontti** — `app/layout.tsx`:
-```typescript
-import { IBM_Plex_Sans } from "next/font/google";
-// Vaihda haluamaksesi Google Fontiksi
-```
-
-**Organisaation nimi ja otsikko** — `lib/config.ts`:
-```typescript
-export const config = {
-  organizationName: 'Oma Yhdistys ry',
-  siteTitle: 'Ajanvaraus',
-  siteDescription: 'Varaa paikka tapahtumaan',
-};
-```
-
----
-
-### 5. Ympäristömuuttujat
-
-Kopioi `.env.example` → `.env.local` ja täytä Apps Script URL:
+Kaikki brändäys (väri, nimi, otsikko) ja tietosuojaselosteen yhteystiedot luetaan
+ympäristömuuttujista — **et tarvitse muokata koodia**. Kopioi `.env.example` → `.env.local`
+ja täytä:
 
 ```bash
 cp .env.example .env.local
@@ -148,11 +146,30 @@ cp .env.example .env.local
 
 ```
 GOOGLE_APPS_SCRIPT_URL=https://script.google.com/macros/s/KOPIOIMASI_URL/exec
+NEXT_PUBLIC_ORG_NAME=Oma Yhdistys ry
+NEXT_PUBLIC_SITE_TITLE=Ajanvaraus
+NEXT_PUBLIC_SITE_DESCRIPTION=Varaa paikka tapahtumaan
+NEXT_PUBLIC_BRAND_COLOR=#284734
+NEXT_PUBLIC_PRIVACY_CONTROLLER_NAME=Oma Yhdistys ry
+NEXT_PUBLIC_PRIVACY_CONTROLLER_ADDRESS=Katuosoite 1, 00100 Helsinki
+NEXT_PUBLIC_PRIVACY_CONTACT_NAME=Etunimi Sukunimi
+NEXT_PUBLIC_PRIVACY_CONTACT_EMAIL=yhteys@omayhdistys.fi
 ```
+
+Tumma/vaalea/keskisävy lasketaan `NEXT_PUBLIC_BRAND_COLOR`-arvosta automaattisesti
+(`lib/color.ts`) — niitä ei tarvitse antaa erikseen.
+
+**Täytä tietosuojakentät aina omilla tiedoillasi.** Jos jätät ne tyhjäksi, sivustolla
+näkyy oletuksena Espoon Vihreiden tiedot (nykyisen tuotantoasennuksen takautuvan
+yhteensopivuuden vuoksi) — väärän organisaation lakisääteinen yhteystieto varaajille.
+
+Jos haluat silti muokata suoraan koodia (esim. fontin — `app/layout.tsx`,
+`IBM_Plex_Sans`-importti), se on yhä mahdollista: `.env`-arvot vain ohittavat
+`lib/config.ts`:n oletukset, koodi itsessään toimii samoin kuin ennenkin.
 
 ---
 
-### 6. Testaa paikallisesti
+### 5. Testaa paikallisesti
 
 ```bash
 npm run dev
@@ -162,7 +179,7 @@ Avaa [http://localhost:3000](http://localhost:3000)
 
 ---
 
-### 7. Deployaa Verceliin
+### 6. Deployaa Verceliin
 
 ```bash
 git add -A
@@ -171,8 +188,8 @@ git push
 ```
 
 1. Kirjaudu [vercel.com](https://vercel.com)
-2. **Add New → Project → Import** GitHub-repositorio
-3. **Environment Variables** → lisää `GOOGLE_APPS_SCRIPT_URL`
+2. **Add New → Project → Import** oma forkkisi GitHubista (ei alkuperäistä reimakuukka-ai-repoa)
+3. **Environment Variables** → lisää kaikki `.env.local`:iin täyttämäsi muuttujat
 4. Klikkaa **Deploy**
 
 > Muista päivittää `CONFIG.BOOKING_URL` Code.gs:ssä Vercel-osoitteellesi ja deployata Apps Script uudelleen.
@@ -205,7 +222,8 @@ appointment-booking/
 │   ├── BookingForm.tsx         # Varauslomake
 │   └── SlotPicker.tsx          # Aikaslottien valinta
 ├── lib/
-│   ├── config.ts               # Frontend-konfiguraatio
+│   ├── config.ts               # Frontend-konfiguraatio (lukee .env-muuttujat)
+│   ├── color.ts                # Laskee brand-dark/light/mid pääväristä
 │   └── googleSheets.ts         # API-kutsut Apps Scriptiin
 └── apps-script/
     └── Code.gs                 # Koko backend

@@ -30,7 +30,7 @@ export default async function HomePage() {
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-3xl font-bold text-gray-900">Ilmoittautuminen tapahtumiin</h1>
-          <Link href="/omat-varaukset" className="text-sm text-brand hover:underline">
+          <Link href="/omat-varaukset" className="text-sm text-[var(--color-brand)] hover:underline">
             Omat varaukset →
           </Link>
         </div>

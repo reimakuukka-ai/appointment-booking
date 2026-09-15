@@ -3,6 +3,19 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* ============================================================
+     BRÄNDIVÄRIT — oletusarvot (Espoon Vihreät). Näitä EI muuteta
+     tässä tiedostossa: RootLayout (app/layout.tsx) kirjoittaa
+     nämä ylikirjoituksena inline-tyylinä lib/config.ts:n
+     brandColor-arvon perusteella (ks. NEXT_PUBLIC_BRAND_COLOR),
+     joten pääväri riittää yhtenä env-muuttujana — tumma/vaalea/
+     keskisävy lasketaan siitä automaattisesti (lib/color.ts).
+     ============================================================ */
+  --color-brand:       #284734;   /* Pääväri */
+  --color-brand-dark:  #1c3325;   /* Tummempi (hover, teksti) */
+  --color-brand-light: #eaf0ec;   /* Vaalea tausta */
+  --color-brand-mid:   #3a6349;   /* Keskisävy */
 }
 
 @theme inline {
@@ -10,15 +23,13 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-ibm-plex-sans), system-ui, sans-serif;
 
-  /* ============================================================
-     BRÄNDIVÄRIT — muuta --color-brand omaksi värisiksesi.
-     Tumma ja vaalea sävy lasketaan automaattisesti tummemmaksi
-     ja vaaleammaksi versioksi pääväristä.
-     ============================================================ */
-  --color-brand:       #284734;   /* Pääväri */
-  --color-brand-dark:  #1c3325;   /* Tummempi (hover, teksti) */
-  --color-brand-light: #eaf0ec;   /* Vaalea tausta */
-  --color-brand-mid:   #3a6349;   /* Keskisävy */
+  /* Rekisteröi brand-värit Tailwind-utiliteeteille VAR-VIITTAUKSENA
+     (ei bakattuna literaalina) jotta app/layout.tsx:n runtime-
+     ylikirjoitus yllä olevaan :root-lohkoon todella vaikuttaa. */
+  --color-brand: var(--color-brand);
+  --color-brand-dark: var(--color-brand-dark);
+  --color-brand-light: var(--color-brand-light);
+  --color-brand-mid: var(--color-brand-mid);
 }
 
 body {

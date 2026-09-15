@@ -39,12 +39,12 @@ export default function SlotPicker({ slots, selected, maxSelect, onChange }: Pro
               className={[
                 'rounded-lg border px-4 py-3 text-sm text-left transition-colors w-full',
                 isSelected
-                  ? 'border-brand bg-brand text-white'
+                  ? 'border-[var(--color-brand)] bg-[var(--color-brand)] text-white'
                   : isFull
                   ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
                   : isDisabled
                   ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
-                  : 'border-gray-200 bg-white text-gray-800 hover:border-brand hover:bg-brand-light cursor-pointer',
+                  : 'border-gray-200 bg-white text-gray-800 hover:border-[var(--color-brand)] hover:bg-[var(--color-brand-light)] cursor-pointer',
               ].join(' ')}
             >
               <div className="flex items-center justify-between">

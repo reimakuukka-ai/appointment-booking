@@ -102,7 +102,7 @@ export default function OmatVarauksetPage() {
   return (
     <main className="min-h-screen bg-gray-50 py-12 px-4">
       <div className="max-w-2xl mx-auto">
-        <Link href="/" className="text-sm text-brand hover:underline flex items-center gap-1 mb-6">
+        <Link href="/" className="text-sm text-[var(--color-brand)] hover:underline flex items-center gap-1 mb-6">
           ← Takaisin tapahtumiin
         </Link>
 
@@ -125,7 +125,7 @@ export default function OmatVarauksetPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="matti@esimerkki.fi"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)]"
                 />
               </div>
               {error && (
@@ -136,7 +136,7 @@ export default function OmatVarauksetPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-brand text-white font-medium py-2.5 rounded-lg hover:bg-brand-dark disabled:opacity-50 transition-colors"
+                className="w-full bg-[var(--color-brand)] text-white font-medium py-2.5 rounded-lg hover:bg-[var(--color-brand-dark)] disabled:opacity-50 transition-colors"
               >
                 {loading ? 'Lähetetään...' : 'Lähetä vahvistuskoodi'}
               </button>
@@ -163,7 +163,7 @@ export default function OmatVarauksetPage() {
                   onChange={(e) => setCode(e.target.value)}
                   placeholder="123456"
                   maxLength={6}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand tracking-widest text-center text-lg"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] tracking-widest text-center text-lg"
                 />
               </div>
               {error && (
@@ -174,7 +174,7 @@ export default function OmatVarauksetPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-brand text-white font-medium py-2.5 rounded-lg hover:bg-brand-dark disabled:opacity-50 transition-colors"
+                className="w-full bg-[var(--color-brand)] text-white font-medium py-2.5 rounded-lg hover:bg-[var(--color-brand-dark)] disabled:opacity-50 transition-colors"
               >
                 {loading ? 'Tarkistetaan...' : 'Näytä varaukset'}
               </button>

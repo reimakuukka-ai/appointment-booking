@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Event } from '@/lib/googleSheets';
+import { config } from '@/lib/config';
 import SlotPicker from './SlotPicker';
 
 interface Props {
@@ -33,8 +34,8 @@ function TietosuojaAccordion() {
 
           <div>
             <p className="font-medium text-gray-700">Rekisterinpitäjä</p>
-            <p>Espoon Vihreät ry, Mannerheimintie 15b A, 00260 Helsinki</p>
-            <p>Yhteyshenkilö: Reima Kuukka, reima.kuukka@vihreat.fi</p>
+            <p>{config.privacy.controllerName}, {config.privacy.controllerAddress}</p>
+            <p>Yhteyshenkilö: {config.privacy.contactName}, {config.privacy.contactEmail}</p>
           </div>
 
           <div>
@@ -140,7 +141,7 @@ export default function BookingForm({ event, onSuccess, onBack }: Props) {
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-      <button onClick={onBack} className="text-sm text-brand mb-5 hover:underline flex items-center gap-1">
+      <button onClick={onBack} className="text-sm text-[var(--color-brand)] mb-5 hover:underline flex items-center gap-1">
         ← Takaisin
       </button>
 
@@ -168,7 +169,7 @@ export default function BookingForm({ event, onSuccess, onBack }: Props) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Matti Meikäläinen"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)]"
           />
         </div>
 
@@ -181,7 +182,7 @@ export default function BookingForm({ event, onSuccess, onBack }: Props) {
             value={puhelinnumero}
             onChange={(e) => setPuhelinnumero(e.target.value)}
             placeholder="+358 40 123 4567"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)]"
           />
         </div>
 
@@ -193,7 +194,7 @@ export default function BookingForm({ event, onSuccess, onBack }: Props) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="matti@esimerkki.fi"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)]"
           />
         </div>
 
@@ -205,7 +206,7 @@ export default function BookingForm({ event, onSuccess, onBack }: Props) {
               type="checkbox"
               checked={tietosuojaHyvaksytty}
               onChange={(e) => setTietosuojaHyvaksytty(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-brand cursor-pointer"
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-[var(--color-brand)] cursor-pointer"
             />
             <span className="text-sm text-gray-700">
               Olen lukenut tietosuojaselosteen ja hyväksyn henkilötietojeni käsittelyn varauksen tekemistä varten.
@@ -222,7 +223,7 @@ export default function BookingForm({ event, onSuccess, onBack }: Props) {
         <button
           type="submit"
           disabled={loading || selectedSlots.length === 0 || !tietosuojaHyvaksytty}
-          className="w-full bg-brand text-white font-medium py-2.5 rounded-lg hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full bg-[var(--color-brand)] text-white font-medium py-2.5 rounded-lg hover:bg-[var(--color-brand-dark)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {loading ? 'Varataan...' : `Vahvista varaus${selectedSlots.length > 0 ? ` (${selectedSlots.length} slotti${selectedSlots.length !== 1 ? 'a' : ''})` : ''}`}
         </button>

@@ -1,5 +1,61 @@
 @AGENTS.md
 
+# Ajanvaraustyökalu
+
+## Käyttöönotto uudelle organisaatiolle — lue tämä ensin
+
+Tämä repo on alun perin rakennettu Espoon Vihreille, mutta se on tarkoitettu myös muiden
+yhdistysten/organisaatioiden käyttöön templaattina. Brändi (nimi, väri) ja tietosuojaselosteen
+yhteystiedot luetaan `.env.local`/Vercel-ympäristömuuttujista (ks. `.env.example`,
+`lib/config.ts`) — `lib/config.ts`:n lähdekoodi näyttää AINA Espoon Vihreiden oletusarvot,
+se ei ole merkki siitä onko projekti jo konfiguroitu jollekin toiselle organisaatiolle.
+Tarkista sen sijaan:
+
+- Onko käyttäjä kertonut suoraan haluavansa ottaa työkalun käyttöön omalle organisaatiolleen?
+- Onko tässä kansiossa `.env.local`-tiedosto, ja jos on, näyttääkö sen
+  `NEXT_PUBLIC_ORG_NAME`/`NEXT_PUBLIC_PRIVACY_CONTROLLER_NAME` joltain muulta kuin Espoon
+  Vihreiltä? Jos `.env.local` puuttuu kokonaan, projektia ei ole vielä konfiguroitu kenellekään.
+- `apps-script/Code.gs` → `CONFIG.ORGANIZER_EMAIL` on yhä `info@espoonvihreat.fi`?
+
+**Jos mikä tahansa yllä olevista viittaa siihen ettei tätä ole vielä otettu käyttöön (uudelle
+tai millekään) organisaatiolle**, älä käytä alla olevaa "Yleiskuvaus"-osiota kontekstina.
+Käynnistä sen sijaan ohjattu käyttöönotto:
+
+1. Kysy käyttäjältä ensin: haluaako hän NOPEIMMAN reitin (README.md:n "Deploy with Vercel"
+   -nappi — hoitaa forkin, deployn ja env-muuttujien kysymisen kokonaan selaimessa, ei
+   terminaalia) vai täyden ohjatun läpikäynnin jossa Claude auttaa jokaisessa vaiheessa
+   (`START_HERE.md`). Kummassakin tapauksessa Google Sheets + Apps Script -osuus (VAIHE 4–9)
+   pitää tehdä käsin Googlen puolella — se ei riipu valitusta reitistä.
+2. Jos käyttäjä valitsee ohjatun läpikäynnin: kysy yksi kysymys kerrallaan, odota vastaus ennen
+   seuraavaa. Oleta ettei käyttäjä osaa koodata, ellei toisin ilmene. Selitä lyhyesti jokaisen
+   vaiheen alussa mitä tehdään ja miksi.
+3. TÄRKEÄÄ jos istunto on avattu suoraan tähän Espoon Vihreiden kansioon eikä käyttäjän omaan
+   forkkiin: käyttäjällä ei ole kirjoitusoikeutta tähän git-remoteen. Tarkista `git remote -v` —
+   jos se osoittaa `reimakuukka-ai/appointment-booking`, käyttäjän täytyy silti forkata repo
+   omalle GitHub-tililleen (START_HERE.md VAIHE 2) ja joko työskennellä uudessa, omaan forkkiinsa
+   kloonatussa kansiossa, tai vaihtaa tämän kansion originin osoittamaan omaan forkkiinsa
+   (`git remote set-url origin <oma fork-URL>`) ennen kuin mitään committoidaan/pushataan.
+   Jos koodi on jo valmiiksi käyttäjän omassa forkissa/kansiossa, "kloonaa repo" -vaihetta
+   (VAIHE 3) ei tarvitse enää tehdä — aloita suoraan riippuvuuksien asennuksesta (`npm install`)
+   jos `node_modules` puuttuu.
+4. Noudata muuten tarkasti tiedoston `START_HERE.md` kysymyksiä (VAIHE 1) ja vaiheita
+   (VAIHE 2–13): fork omalle GitHub-tilille, Google Sheets -rakenne, Apps Script CONFIG +
+   funktiot + deploy, brändi + tietosuoja + ympäristömuuttujat (`.env.local`, ei koodin
+   muokkausta), paikallistestaus, git-committointi/push, Vercel-deploy (importoi OMA fork,
+   muista viedä KAIKKI `.env.local`-muuttujat myös Vercelin Environment Variables -kohtaan)
+   + `BOOKING_URL`-päivitys + Apps Script-redeploy, lopputesti.
+5. `START_HERE.md`:n lopussa on "YLEISIÄ ONGELMIA" -osio (mm. GitHub-autentikointi, Apps Script
+   -redeployn unohtuminen) — käytä sitä suoraan jos käyttäjä törmää näihin virheisiin.
+6. Kun käyttöönotto on valmis, tarjoa päivittää tämän CLAUDE.md:n "Yleiskuvaus"-osio (ja alla
+   olevat Google Sheets-/Apps Script -taulukot) vastaamaan uuden organisaation lopullisia
+   arvoja, jotta tuleva Claude-istunto tunnistaa asennuksen valmiiksi eikä käynnistä tätä
+   käyttöönotto-ohjausta uudelleen.
+
+Jos konfiguraatio jo osoittaa käyttäjän omaan organisaatioonsa (ei enää Espoon Vihreiden arvoja),
+alla oleva kuvaus on ajantasainen tekninen dokumentaatio siitä asennuksesta — käytä sitä normaalisti.
+
+---
+
 # Espoon Vihreiden ajanvaraustyökalu
 
 ## Yleiskuvaus
