@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getEvents, Event } from '@/lib/googleSheets';
+import { getEvents } from '@/lib/googleSheets';
 import EventList from '@/components/EventList';
 
 // Aiemmin force-dynamic: joka ikinen kävijä odotti live Apps Script -kutsun,
@@ -15,15 +15,12 @@ export const revalidate = 20;
 export const maxDuration = 30;
 
 export default async function HomePage() {
-  let events: Event[] = [];
-  let error = '';
-
-  try {
-    events = await getEvents();
-  } catch (e) {
-    error = 'Tapahtumien lataaminen epäonnistui. Tarkista ympäristömuuttujat ja Google Sheets -yhteys.';
-    console.error(e);
-  }
+  // Ei try/catch: jos Apps Script -kutsu epäonnistuu taustaregeneroinnissa,
+  // Next.js säilyttää viimeisimmän onnistuneen cachen sen sijaan että
+  // tallentaisi virhetilan cacheen 20 sekunniksi kaikille kävijöille.
+  // Ensimmäistä onnistunutta cachea vielä vailla olevaa tilannetta varten
+  // ks. app/error.tsx.
+  const events = await getEvents();
 
   return (
     <main className="min-h-screen bg-gray-50 py-12 px-4">
@@ -36,13 +33,7 @@ export default async function HomePage() {
         </div>
         <p className="text-gray-500 mb-8">Valitse tapahtuma, haluamasi ajankohdat ja täytä yhteystietosi.</p>
 
-        {error ? (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-5 text-red-700 text-sm">
-            {error}
-          </div>
-        ) : (
-          <EventList events={events} />
-        )}
+        <EventList events={events} />
       </div>
     </main>
   );
